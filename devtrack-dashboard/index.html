@@ -219,6 +219,68 @@
   .edit-btn { background: transparent; border: none; cursor: pointer; color: var(--text2); font-size: 11px; padding: 2px 6px; border-radius: 4px; transition: color 0.2s; }
   .edit-btn:hover { color: var(--accent4); }
   .error-msg { color: var(--danger); font-size: 11px; margin-top: 4px; display: none; }
+  /* MEP BLOCKS (in Bilan) */
+  .mep-block-item { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; background: var(--surface2); overflow: hidden; }
+  .mep-block-header { display: flex; align-items: center; gap: 10px; padding: 8px 10px; cursor: pointer; user-select: none; transition: background 0.15s; }
+  .mep-block-header:hover { background: rgba(255,255,255,0.03); }
+  .mep-block-toggle { color: var(--text2); transition: transform 0.2s; font-size: 10px; flex-shrink: 0; }
+  .mep-block-item.expanded .mep-block-toggle { transform: rotate(90deg); }
+  .mep-block-info { flex: 1; min-width: 0; }
+  .mep-block-name { font-size: 12px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+  .mep-block-meta { font-size: 10px; color: var(--text2); display: flex; gap: 6px; flex-wrap: wrap; }
+  .mep-block-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .mep-block-actions .mep-action-btn { width: 22px; height: 20px; font-size: 10px; }
+  .mep-block-tasks { display: none; padding: 6px 10px 8px 28px; background: rgba(0,0,0,0.15); border-top: 1px solid var(--border); }
+  .mep-block-item.expanded .mep-block-tasks { display: block; }
+  .mep-block-task { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(37,40,54,0.4); font-size: 11px; }
+  .mep-block-task:last-child { border-bottom: none; }
+  .mep-block-task-status { font-size: 11px; flex-shrink: 0; width: 16px; }
+  .mep-block-task-name { flex: 1; min-width: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mep-block-task .mep-date-inline { width: 100px; padding: 2px 4px; font-size: 10px; }
+  .mep-block-task .mep-action-btn { width: 22px; height: 20px; font-size: 10px; }
+  .mep-block-task .badge, .mep-block-task .delay-chip { font-size: 9px; padding: 1px 5px; }
+  /* AVANCEMENT */
+  .av-chantier { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+  .av-chantier-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; background: var(--surface2); user-select: none; }
+  .av-chantier-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; flex: 1; }
+  .av-chantier-summary { font-size: 11px; color: var(--text2); }
+  .av-chantier-body { padding: 8px 16px 14px; }
+  .av-block { display: flex; align-items: center; gap: 14px; padding: 12px 12px; border-bottom: 1px solid rgba(37,40,54,0.6); transition: background 0.15s; }
+  .av-block:last-child { border-bottom: none; }
+  .av-block:hover { background: rgba(255,255,255,0.02); }
+  .av-block-dev { display: flex; align-items: center; gap: 8px; min-width: 160px; flex-shrink: 0; }
+  .av-block-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .av-block-dev-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .av-block-info { flex: 1; min-width: 0; }
+  .av-block-title { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .av-block-title .av-edit { opacity: 0; background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 11px; padding: 0 4px; transition: opacity 0.15s, color 0.15s; }
+  .av-block:hover .av-block-title .av-edit { opacity: 1; }
+  .av-block-title .av-edit:hover { color: var(--accent4); }
+  .av-block-meta { font-size: 11px; color: var(--text2); display: flex; gap: 10px; flex-wrap: wrap; }
+  .av-block-mep { font-size: 12px; color: var(--warning); white-space: nowrap; padding: 3px 8px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); border-radius: 4px; flex-shrink: 0; }
+  .av-block-mep.late { color: var(--danger); background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.3); }
+  .av-block-mep.none { color: var(--text2); background: transparent; border-color: var(--border); }
+  .av-block-progress-wrap { display: flex; align-items: center; gap: 8px; min-width: 180px; flex-shrink: 0; }
+  .av-block-progress-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .av-block-progress-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .av-block-progress-fill.done { background: var(--accent3); }
+  .av-block-progress-fill.ready { background: var(--accent); }
+  .av-block-progress-fill.ongoing { background: var(--accent4); }
+  .av-block-progress-fill.review { background: #a78bfa; }
+  .av-block-progress-fill.todo { background: var(--text2); }
+  .av-block-progress-txt { font-size: 11px; color: var(--text2); min-width: 70px; text-align: right; }
+  .av-block-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; min-width: 90px; text-align: center; }
+  .av-block-tasks { padding: 8px 0 4px 46px; display: none; }
+  .av-block.expanded .av-block-tasks { display: block; }
+  .av-block-task { font-size: 11px; color: var(--text2); padding: 3px 0; display: flex; gap: 8px; align-items: center; }
+  .av-block-task-status { font-size: 10px; }
+  .av-toggle-tasks { background: transparent; border: none; color: var(--text2); cursor: pointer; font-size: 11px; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+  .av-toggle-tasks:hover { color: var(--text); }
+  .av-empty { text-align: center; padding: 40px 20px; color: var(--text2); font-size: 13px; }
+  @media (max-width: 900px) {
+    .av-block { flex-wrap: wrap; }
+    .av-block-progress-wrap { width: 100%; min-width: 0; }
+  }
   @media (max-width: 768px) {
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .grid-2 { grid-template-columns: 1fr; }
@@ -534,6 +596,21 @@
   </div>
 </div>
 
+<div class="modal-overlay hidden" id="modal-edit-block">
+  <div class="modal">
+    <div class="modal-title">✏ Renommer le bloc</div>
+    <input type="hidden" id="edit-block-key">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px" id="edit-block-default"></div>
+    <div class="form-group"><label>Nom du bloc</label><input id="edit-block-name" placeholder="Ex: Espace abonné & adresses"></div>
+    <div class="form-group"><label>Description courte <span style="color:var(--text2);font-weight:400">(optionnel)</span></label><input id="edit-block-desc" placeholder="Ex: Refonte du parcours d'abonnement"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="margin-right:auto;color:var(--danger);border-color:rgba(248,113,113,0.3)" onclick="resetBlockOverride()">↺ Remettre par défaut</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-block')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveBlockOverride()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-edit-sprint">
   <div class="modal">
     <div class="modal-title">✏ Modifier le sprint</div>
@@ -622,7 +699,8 @@ let state = {
       ]},
     ]},
   ],
-  nextId:{dev:6,chantier:3,sprint:6,task:12}
+  nextId:{dev:6,chantier:3,sprint:6,task:12},
+  blockOverrides:{}
 };
 
 // ===== WORKSPACES & PERSISTENCE (Firestore) =====
@@ -631,7 +709,7 @@ let workspaces = []; // [{id, name}]
 let activeWsId = null;
 
 function emptyState(){
-  return { devs: [], chantiers: [], nextId: { dev: 1, chantier: 1, sprint: 1, task: 1 } };
+  return { devs: [], chantiers: [], blockOverrides: {}, nextId: { dev: 1, chantier: 1, sprint: 1, task: 1 } };
 }
 function defaultDemoState(){
   return JSON.parse(JSON.stringify({
@@ -656,6 +734,7 @@ async function saveState() {
       name: ws ? ws.name : 'Workspace',
       devs: state.devs,
       chantiers: state.chantiers,
+      blockOverrides: state.blockOverrides || {},
       nextId: state.nextId,
       _migrated_v2: true
     });
@@ -714,6 +793,7 @@ function subscribeToActiveWorkspace(){
     state = {
       devs: data.devs || [],
       chantiers: data.chantiers || [],
+      blockOverrides: data.blockOverrides || {},
       nextId: data.nextId || { dev: 1, chantier: 1, sprint: 1, task: 1 }
     };
     render();
@@ -1968,64 +2048,117 @@ function renderBilan(){
     </div>`;
   }).join('');
 
-  // Section MEP planifiée — liste des tâches validated + mep_done
-  // Tri: à planifier (sans date) en haut, puis par mepDate ascendant, livrées en bas
-  const mepEntries = allTasks
-    .map(t => {
-      const st = taskStatus(t);
-      if (st !== 'validated' && st !== 'mep_done') return null;
-      const chantier = state.chantiers.find(c => c.sprints.some(sp => sp.tasks.some(tt => tt.id === t.id)));
-      const sprint = state.chantiers.flatMap(c => c.sprints).find(sp => sp.tasks.some(tt => tt.id === t.id));
-      return { t, chantier, sprint, st };
+  // Section MEP planifiée — par BLOC fonctionnel (Chantier × Dev)
+  // Un bloc apparaît si au moins 1 tâche validated ou mep_done dedans.
+  // Date MEP du bloc = max(mepDate) des tâches validated+mep_done.
+  // Tri: à planifier (aucune date) en haut, puis par date asc, blocs 100% livrés en bas.
+  const allBlocks = getAvancementBlocks();
+  const mepBlocks = allBlocks
+    .map(b => {
+      const eligible = b.tasks.filter(x => {
+        const st = taskStatus(x.task);
+        return st === 'validated' || st === 'mep_done';
+      });
+      if (!eligible.length) return null;
+      const datedTasks = eligible.filter(x => x.task.mepDate);
+      const maxMep = datedTasks.length
+        ? datedTasks.map(x => x.task.mepDate).sort().reverse()[0]
+        : '';
+      const totalActive = b.tasks.filter(x => taskStatus(x.task) !== 'cancelled').length;
+      const delivered = b.tasks.filter(x => taskStatus(x.task) === 'mep_done').length;
+      const validated = eligible.length;
+      const allDelivered = totalActive > 0 && delivered === totalActive;
+      return { block: b, eligible, maxMep, totalActive, delivered, validated, allDelivered };
     })
     .filter(Boolean)
     .sort((a, b) => {
-      // mep_done en bas
-      if (a.st === 'mep_done' && b.st !== 'mep_done') return 1;
-      if (a.st !== 'mep_done' && b.st === 'mep_done') return -1;
-      // À planifier (validated sans date) en haut
-      const aUnp = (a.st === 'validated' && !a.t.mepDate);
-      const bUnp = (b.st === 'validated' && !b.t.mepDate);
+      // Blocs 100% livrés en bas
+      if (a.allDelivered && !b.allDelivered) return 1;
+      if (!a.allDelivered && b.allDelivered) return -1;
+      // Blocs sans date MEP en haut (à planifier)
+      const aUnp = !a.maxMep;
+      const bUnp = !b.maxMep;
       if (aUnp && !bUnp) return -1;
       if (!aUnp && bUnp) return 1;
-      // par date ascendante
-      return (a.t.mepDate || '').localeCompare(b.t.mepDate || '');
+      // Par date ascendante
+      return (a.maxMep || '').localeCompare(b.maxMep || '');
     });
 
   const sumEl = document.getElementById('bilan-mep-summary');
-  if (!mepEntries.length){
-    sumEl.innerHTML = '<div style="color:var(--text2);font-size:12px">Aucune tâche prête pour la MEP.</div>';
+  if (!mepBlocks.length){
+    sumEl.innerHTML = '<div style="color:var(--text2);font-size:12px">Aucun bloc prêt pour la MEP.</div>';
   } else {
-    sumEl.innerHTML = mepEntries.map(({t, chantier, sprint, st}) => {
-      const sid = sprint ? sprint.id : 0;
-      const ctx = `${chantier?chantier.name:'?'} › ${sprint?sprint.name:'?'}`;
-      let badge, dateCell;
-      if (st === 'mep_done'){
-        badge = '<span class="delay-chip ok">🚀 Livrée</span>';
-        dateCell = `<input type="date" class="mep-date-inline" value="${t.mepDate||''}" onchange="setTaskMepDate(${sid},${t.id},this.value)" title="Date de mise en production (éditable)">`;
-      } else if (t.mepDate){
-        const d = diffDays(pd(t.mepDate), TODAY);
+    sumEl.innerHTML = mepBlocks.map(({block: b, eligible, maxMep, totalActive, delivered, validated, allDelivered}) => {
+      let badge, dateLine;
+      if (allDelivered){
+        badge = '<span class="delay-chip ok">🚀 Livré</span>';
+        dateLine = maxMep ? `<span style="color:var(--text2);font-size:11px">MEP : ${fmtDate(maxMep)}</span>` : '';
+      } else if (maxMep){
+        const d = diffDays(pd(maxMep), TODAY);
         if (d < 0) badge = `<span class="delay-chip">+${-d}j retard MEP</span>`;
         else if (d === 0) badge = '<span class="badge badge-yellow">Aujourd\'hui</span>';
         else badge = `<span class="badge badge-gray">Dans ${d}j</span>`;
-        dateCell = `<input type="date" class="mep-date-inline" value="${t.mepDate}" onchange="setTaskMepDate(${sid},${t.id},this.value)">`;
+        dateLine = `<span style="color:var(--warning);font-size:11px">📅 ${fmtDate(maxMep)}</span>`;
       } else {
         badge = '<span class="badge badge-purple">À planifier</span>';
-        dateCell = `<input type="date" class="mep-date-inline" value="" onchange="setTaskMepDate(${sid},${t.id},this.value)" placeholder="—">`;
+        dateLine = '<span style="color:var(--text2);font-size:11px">Aucune date MEP</span>';
       }
-      const action = st === 'mep_done'
-        ? `<button class="mep-action-btn" onclick="setTaskStatus(${sid},${t.id},'validated')" title="Marquer non livrée">↶</button>`
-        : `<button class="mep-action-btn ok" onclick="setTaskStatus(${sid},${t.id},'mep_done')" title="Marquer livrée">✓</button>`;
-      return `<div class="mep-row-item">
-        <div class="mep-row-info">
-          <div class="mep-row-name" title="${escapeHtml(t.name)}">🚀 ${t.name}</div>
-          <div class="mep-row-ctx" title="${escapeHtml(ctx)}">${ctx}</div>
-        </div>
-        <div class="mep-row-actions">
-          ${dateCell}
-          ${badge}
+      const devName = b.dev ? b.dev.name : 'Non assigné';
+      const devColor = b.dev ? b.dev.color : 'var(--text2)';
+      const blockKey = b.key;
+      const tasksHtml = b.tasks.map(x => {
+        const st = taskStatus(x.task);
+        const info = STATUS_INFO[st] || STATUS_INFO.todo;
+        const sid = x.sprint.id;
+        let taskBadge, taskDate;
+        if (st === 'mep_done'){
+          taskBadge = '<span class="delay-chip ok">🚀</span>';
+          taskDate = `<input type="date" class="mep-date-inline" value="${x.task.mepDate||''}" onchange="setTaskMepDate(${sid},${x.task.id},this.value)" title="Date MEP (éditable)">`;
+        } else if (st === 'validated'){
+          if (x.task.mepDate){
+            const d = diffDays(pd(x.task.mepDate), TODAY);
+            taskBadge = d < 0 ? `<span class="delay-chip">+${-d}j</span>` : d === 0 ? '<span class="badge badge-yellow">Auj.</span>' : `<span class="badge badge-gray">${d}j</span>`;
+          } else {
+            taskBadge = '<span class="badge badge-purple">À planifier</span>';
+          }
+          taskDate = `<input type="date" class="mep-date-inline" value="${x.task.mepDate||''}" onchange="setTaskMepDate(${sid},${x.task.id},this.value)">`;
+        } else {
+          taskBadge = `<span class="badge badge-gray">${info.icon} ${info.short}</span>`;
+          taskDate = `<input type="date" class="mep-date-inline" value="${x.task.mepDate||''}" onchange="setTaskMepDate(${sid},${x.task.id},this.value)" title="Date MEP (éditable)">`;
+        }
+        const action = st === 'mep_done'
+          ? `<button class="mep-action-btn" onclick="setTaskStatus(${sid},${x.task.id},'validated')" title="Marquer non livrée">↶</button>`
+          : st === 'validated'
+            ? `<button class="mep-action-btn ok" onclick="setTaskStatus(${sid},${x.task.id},'mep_done')" title="Marquer livrée">✓</button>`
+            : '<span style="width:24px"></span>';
+        return `<div class="mep-block-task">
+          <span class="mep-block-task-status" title="${info.label}">${info.icon}</span>
+          <span class="mep-block-task-name" title="${escapeHtml(x.task.name)}">${x.task.name}</span>
+          ${taskDate}
+          ${taskBadge}
           ${action}
+        </div>`;
+      }).join('');
+      return `<div class="mep-block-item" id="mep-block-${blockKey}">
+        <div class="mep-block-header" onclick="toggleMepBlock('${blockKey}')">
+          <span class="mep-block-toggle">▸</span>
+          <div class="mep-block-info">
+            <div class="mep-block-name" title="${escapeHtml(b.name)}">${b.isCustom ? '✏ ' : ''}${b.name}</div>
+            <div class="mep-block-meta">
+              <span style="color:${devColor}">${devName}</span>
+              <span>·</span>
+              <span>${b.chantier.name}</span>
+              <span>·</span>
+              <span>${validated}/${totalActive} livrés/validés</span>
+            </div>
+          </div>
+          <div class="mep-block-actions">
+            ${dateLine}
+            ${badge}
+            <button class="mep-action-btn" onclick="event.stopPropagation();openEditBlock('${blockKey}')" title="Renommer le bloc">✏</button>
+          </div>
         </div>
+        <div class="mep-block-tasks">${tasksHtml}</div>
       </div>`;
     }).join('');
   }
@@ -2088,6 +2221,205 @@ function render(){
   // Rafraîchit la vue active si elle est ouverte
   if(document.getElementById('tab-frise')?.classList.contains('active')) renderFrise();
   if(document.getElementById('tab-bilan')?.classList.contains('active')) renderBilan();
+}
+
+// ===== AVANCEMENT (vue blocs fonctionnels) =====
+function blockKey(chantierId, devId){ return `${chantierId}_${devId==null?'none':devId}`; }
+
+function getAvancementBlocks(){
+  if (!state.blockOverrides) state.blockOverrides = {};
+  // Pour chaque chantier, regroupe les tâches actives par dev → un bloc par (chantier × dev)
+  const blocks = [];
+  state.chantiers.forEach(c => {
+    const byDev = new Map(); // devId → { tasks, sprints }
+    c.sprints.forEach(s => {
+      if (s.archived) return;
+      (s.tasks || []).forEach(t => {
+        const dKey = t.dev == null ? 'none' : t.dev;
+        if (!byDev.has(dKey)) byDev.set(dKey, { tasks: [], sprintMeps: new Set() });
+        const entry = byDev.get(dKey);
+        entry.tasks.push({ task: t, sprint: s });
+        if (s.mepTarget) entry.sprintMeps.add(s.mepTarget);
+      });
+    });
+    byDev.forEach((entry, devKey) => {
+      const dev = devKey === 'none' ? null : getDevById(devKey);
+      // Stats
+      const total = entry.tasks.filter(x => taskStatus(x.task) !== 'cancelled').length;
+      if (total === 0) return;
+      const done = entry.tasks.filter(x => { const st = taskStatus(x.task); return st === 'mep_done'; }).length;
+      const validated = entry.tasks.filter(x => { const st = taskStatus(x.task); return st === 'validated' || st === 'mep_done'; }).length;
+      const review = entry.tasks.filter(x => taskStatus(x.task) === 'review').length;
+      const inprog = entry.tasks.filter(x => taskStatus(x.task) === 'in_progress').length;
+      const todo = entry.tasks.filter(x => taskStatus(x.task) === 'todo').length;
+      // MEP représentative : la plus tardive parmi les mepDate, sinon la plus tardive des sprint.mepTarget
+      let mepDate = '';
+      const taskMeps = entry.tasks.map(x => x.task.mepDate).filter(Boolean);
+      if (taskMeps.length) mepDate = taskMeps.sort().reverse()[0];
+      else if (entry.sprintMeps.size) mepDate = [...entry.sprintMeps].sort().reverse()[0];
+      // Status dominant
+      let statusKey, statusLabel, fillClass;
+      if (total > 0 && done === total){ statusKey='done'; statusLabel='🚀 Livré'; fillClass='done'; }
+      else if (total > 0 && validated === total){ statusKey='ready'; statusLabel='✓ Prêt MEP'; fillClass='ready'; }
+      else if (review > 0){ statusKey='review'; statusLabel='👀 En revue'; fillClass='review'; }
+      else if (inprog > 0){ statusKey='ongoing'; statusLabel='⚡ En cours'; fillClass='ongoing'; }
+      else if (todo === total){ statusKey='todo'; statusLabel='🟦 À faire'; fillClass='todo'; }
+      else { statusKey='ongoing'; statusLabel='⚡ En cours'; fillClass='ongoing'; }
+      // Override
+      const key = blockKey(c.id, dev ? dev.id : null);
+      const ov = state.blockOverrides[key] || {};
+      const defaultName = dev ? `${c.name} — ${dev.name.split(' ')[0]}` : `${c.name} — Non assigné`;
+      blocks.push({
+        key, chantier: c, dev, tasks: entry.tasks,
+        name: ov.name || defaultName,
+        desc: ov.desc || '',
+        defaultName,
+        isCustom: !!ov.name,
+        total, done, validated, review, inprog, todo,
+        progress: total > 0 ? Math.round((validated / total) * 100) : 0,
+        mepDate, statusKey, statusLabel, fillClass
+      });
+    });
+  });
+  return blocks;
+}
+
+function renderAvancement(){
+  const root = document.getElementById('avancement-root');
+  if (!root) return;
+  const filter = document.getElementById('avancement-filter')?.value || 'active';
+  const blocks = getAvancementBlocks();
+  const filtered = blocks.filter(b => {
+    if (filter === 'all') return true;
+    if (filter === 'done') return b.statusKey === 'done';
+    if (filter === 'ongoing') return b.statusKey === 'ongoing' || b.statusKey === 'review' || b.statusKey === 'ready';
+    // active: tout sauf done à 100%
+    return b.statusKey !== 'done';
+  });
+  if (filtered.length === 0){
+    root.innerHTML = `<div class="av-empty">Aucun bloc à afficher avec ce filtre.</div>`;
+    return;
+  }
+  // Groupe par chantier
+  const byChantier = new Map();
+  filtered.forEach(b => {
+    if (!byChantier.has(b.chantier.id)) byChantier.set(b.chantier.id, { chantier: b.chantier, blocks: [] });
+    byChantier.get(b.chantier.id).blocks.push(b);
+  });
+  let html = '';
+  byChantier.forEach(({ chantier, blocks }) => {
+    const totalT = blocks.reduce((a,b)=>a+b.total,0);
+    const doneT = blocks.reduce((a,b)=>a+b.validated,0);
+    const pct = totalT > 0 ? Math.round((doneT/totalT)*100) : 0;
+    html += `<div class="av-chantier">
+      <div class="av-chantier-header">
+        <div class="av-chantier-name">📁 ${chantier.name}</div>
+        <div class="av-chantier-summary">${blocks.length} bloc(s) · ${doneT}/${totalT} tâches validées (${pct}%)</div>
+      </div>
+      <div class="av-chantier-body">
+        ${blocks.map(renderAvancementBlock).join('')}
+      </div>
+    </div>`;
+  });
+  root.innerHTML = html;
+}
+
+function renderAvancementBlock(b){
+  const devAv = b.dev
+    ? `<span class="av-block-avatar" style="background:${b.dev.color}22;color:${b.dev.color}">${avatarInitials(b.dev.name)}</span>
+       <span class="av-block-dev-name">${b.dev.name}</span>`
+    : `<span class="av-block-avatar" style="background:rgba(136,146,164,0.15);color:var(--text2)">?</span>
+       <span class="av-block-dev-name" style="color:var(--text2);font-style:italic">Non assigné</span>`;
+  let mepCell;
+  if (b.mepDate){
+    const overdue = b.statusKey !== 'done' && pd(b.mepDate) < TODAY;
+    mepCell = `<div class="av-block-mep ${overdue?'late':''}" title="${overdue?'MEP dépassée':'Date MEP'}">📅 ${fmtDate(b.mepDate)}</div>`;
+  } else {
+    mepCell = `<div class="av-block-mep none" title="Aucune date MEP">— MEP à planifier</div>`;
+  }
+  const statusBadge = `<div class="av-block-status badge badge-${b.statusKey==='done'?'yellow':b.statusKey==='ready'?'green':b.statusKey==='review'?'purple':b.statusKey==='ongoing'?'blue':'gray'}">${b.statusLabel}</div>`;
+  const descLine = b.desc ? `<div class="av-block-meta" style="margin-top:2px"><em>${b.desc}</em></div>` : '';
+  return `<div class="av-block" id="av-block-${b.key}">
+    <div class="av-block-dev">${devAv}</div>
+    <div class="av-block-info">
+      <div class="av-block-title">
+        ${b.name}
+        ${b.isCustom ? '<span style="font-size:9px;color:var(--accent4);opacity:0.7" title="Nom personnalisé">●</span>' : ''}
+        <button class="av-edit" onclick="openEditBlock('${b.key}')" title="Renommer">✏</button>
+      </div>
+      <div class="av-block-meta">
+        <span>${b.total} tâche${b.total>1?'s':''}</span>
+        <span>·</span>
+        <span>${b.done} livrée${b.done>1?'s':''}</span>
+        ${b.review>0?`<span>·</span><span>${b.review} en revue</span>`:''}
+        ${b.inprog>0?`<span>·</span><span>${b.inprog} en cours</span>`:''}
+        ${b.todo>0?`<span>·</span><span>${b.todo} à faire</span>`:''}
+      </div>
+      ${descLine}
+    </div>
+    ${mepCell}
+    <div class="av-block-progress-wrap">
+      <div class="av-block-progress-track"><div class="av-block-progress-fill ${b.fillClass}" style="width:${b.progress}%"></div></div>
+      <div class="av-block-progress-txt">${b.progress}% · ${b.validated}/${b.total}</div>
+    </div>
+    ${statusBadge}
+    <button class="av-toggle-tasks" onclick="toggleAvBlockTasks('${b.key}')" title="Voir les tâches">▾</button>
+    <div class="av-block-tasks">
+      ${b.tasks.map(x => {
+        const st = taskStatus(x.task);
+        const info = STATUS_INFO[st] || STATUS_INFO.todo;
+        return `<div class="av-block-task"><span class="av-block-task-status">${info.icon}</span><span style="flex:1">${x.task.name}</span><span style="opacity:0.6">${x.sprint.name}</span></div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function toggleAvBlockTasks(key){
+  const el = document.getElementById(`av-block-${key}`);
+  if (el) el.classList.toggle('expanded');
+}
+
+function toggleMepBlock(key){
+  const el = document.getElementById(`mep-block-${key}`);
+  if (el) el.classList.toggle('expanded');
+}
+
+function openEditBlock(key){
+  const blocks = getAvancementBlocks();
+  const b = blocks.find(x => x.key === key);
+  if (!b) return;
+  document.getElementById('edit-block-key').value = key;
+  document.getElementById('edit-block-default').textContent = `Bloc auto : ${b.defaultName}`;
+  const ov = state.blockOverrides[key] || {};
+  document.getElementById('edit-block-name').value = ov.name || '';
+  document.getElementById('edit-block-desc').value = ov.desc || '';
+  openModal('modal-edit-block');
+  setTimeout(() => document.getElementById('edit-block-name').focus(), 50);
+}
+
+function saveBlockOverride(){
+  const key = document.getElementById('edit-block-key').value;
+  const name = document.getElementById('edit-block-name').value.trim();
+  const desc = document.getElementById('edit-block-desc').value.trim();
+  if (!state.blockOverrides) state.blockOverrides = {};
+  if (!name && !desc){
+    delete state.blockOverrides[key];
+  } else {
+    state.blockOverrides[key] = {};
+    if (name) state.blockOverrides[key].name = name;
+    if (desc) state.blockOverrides[key].desc = desc;
+  }
+  closeModal('modal-edit-block');
+  saveState();
+  renderAvancement();
+}
+
+function resetBlockOverride(){
+  const key = document.getElementById('edit-block-key').value;
+  if (state.blockOverrides && state.blockOverrides[key]) delete state.blockOverrides[key];
+  closeModal('modal-edit-block');
+  saveState();
+  renderAvancement();
 }
 
 // ===== FRISE DRAG & DROP =====
@@ -2589,7 +2921,8 @@ Object.assign(window, {
   openMergeChantierModal, confirmMergeChantier,
   openMoveSprintModal, confirmMoveSprint,
   onGlobalSearch, renderFrise, renderBilan, handleJiraFile,
-  openBackupsModal, closeBackupsModal, restoreBackup
+  openBackupsModal, closeBackupsModal, restoreBackup,
+  openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock
 });
 
 initApp().catch(e => { console.error('initApp', e); alert('Erreur connexion Firestore. Vérifie les règles de sécurité.'); });

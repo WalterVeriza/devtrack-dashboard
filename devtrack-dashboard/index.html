@@ -2468,11 +2468,13 @@ function renderBilan(){
       const late = isLate(it);
       let badge, dateLine;
       if (late){
+        // diffDays(end, today) est positif quand end est dans le passé
         const d = diffDays(pd(it.end), TODAY);
-        badge = `<span class="delay-chip">+${-d}j retard</span>`;
+        badge = `<span class="delay-chip">+${d}j retard</span>`;
         dateLine = `<span style="color:var(--danger);font-size:11px">📅 ${fmtDate(it.end)}</span>`;
       } else if (it.end){
-        const d = diffDays(pd(it.end), TODAY);
+        // diffDays(today, end) est positif quand end est dans le futur
+        const d = diffDays(TODAY, pd(it.end));
         if (d === 0) badge = '<span class="badge badge-yellow">Aujourd\'hui</span>';
         else if (d <= 7) badge = `<span class="badge badge-yellow">Dans ${d}j</span>`;
         else badge = `<span class="badge badge-gray">Dans ${d}j</span>`;
@@ -2548,7 +2550,7 @@ function renderBilan(){
     let delayCell;
     if (late){
       const d = diffDays(pd(it.end), TODAY);
-      delayCell = `<span class="delay-chip">+${-d}j</span>`;
+      delayCell = `<span class="delay-chip">+${d}j</span>`;
     } else if (done){
       delayCell = '<span class="delay-chip ok">✓ Livré</span>';
     } else {

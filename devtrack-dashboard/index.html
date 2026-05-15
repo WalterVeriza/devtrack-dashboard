@@ -353,6 +353,7 @@
   </div>
   <div class="tabs">
     <div class="tab active" onclick="showTab('roadmap')">🗺 Roadmap</div>
+    <div class="tab" onclick="showTab('programmation')">📝 Programmation</div>
     <div class="tab" onclick="showTab('bilan')">📊 Bilan</div>
   </div>
   <div class="actions-wrap">
@@ -479,6 +480,26 @@
   <div id="roadmap-empty" style="display:none;padding:40px;text-align:center;color:var(--text2);font-size:13px">
     Aucun élément dans la roadmap. Clique sur <strong>+ Ajouter</strong> ou importe un CSV via le menu Actions.
   </div>
+</div>
+
+<!-- TAB PROGRAMMATION -->
+<div id="tab-programmation" class="main page">
+  <div class="section-header">
+    <div>
+      <div class="section-title">📝 Programmation de la roadmap</div>
+      <div style="color:var(--text2);font-size:11px;margin-top:2px">Saisis et édite les fonctionnalités, leurs dates de mise en production et le dev responsable</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="prog-cat-filter" onchange="renderProgrammation()" style="width:160px">
+        <option value="all">Toutes catégories</option>
+      </select>
+      <select id="prog-dev-filter" onchange="renderProgrammation()" style="width:160px">
+        <option value="all">Tous les devs</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openRoadmapItemModal()">+ Ajouter</button>
+    </div>
+  </div>
+  <div id="prog-root" class="roadmap-container"></div>
 </div>
 
 <!-- MODALS -->
@@ -975,6 +996,7 @@ function subscribeToRoadmap(){
     }
     roadmapReady = true;
     if (document.getElementById('tab-roadmap')?.classList.contains('active')) renderRoadmap();
+    if (document.getElementById('tab-programmation')?.classList.contains('active')) renderProgrammation();
   }, (err) => console.error('onSnapshot roadmap', err));
 }
 async function saveRoadmap(){
@@ -2525,11 +2547,12 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{
-    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='bilan'&&t.textContent.includes('Bilan')))t.classList.add('active');
+    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='programmation'&&t.textContent.includes('Programmation'))||(name==='bilan'&&t.textContent.includes('Bilan')))t.classList.add('active');
   });
   if(name==='frise')renderFrise();
   if(name==='bilan')renderBilan();
   if(name==='roadmap')renderRoadmap();
+  if(name==='programmation')renderProgrammation();
 }
 
 function render(){
@@ -2538,6 +2561,7 @@ function render(){
   // Rafraîchit la vue active si elle est ouverte
   if(document.getElementById('tab-frise')?.classList.contains('active')) renderFrise();
   if(document.getElementById('tab-bilan')?.classList.contains('active')) renderBilan();
+  if(document.getElementById('tab-programmation')?.classList.contains('active')) renderProgrammation();
 }
 
 // ===== AVANCEMENT (vue blocs fonctionnels) =====
@@ -3562,6 +3586,7 @@ function saveRoadmapItem(){
   closeModal('modal-roadmap-item');
   saveRoadmap();
   renderRoadmap();
+  if (document.getElementById('tab-programmation')?.classList.contains('active')) renderProgrammation();
 }
 function deleteRoadmapItemFromModal(){
   const id = document.getElementById('roadmap-item-id').value;
@@ -3571,6 +3596,161 @@ function deleteRoadmapItemFromModal(){
   closeModal('modal-roadmap-item');
   saveRoadmap();
   renderRoadmap();
+}
+
+// ===== PROGRAMMATION : table éditable de tous les items roadmap =====
+function renderProgrammation(){
+  const root = document.getElementById('prog-root');
+  if (!root) return;
+  if (!roadmapReady){
+    root.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text2);font-size:12px">Chargement…</div>';
+    return;
+  }
+
+  // Filtres
+  const catFilterEl = document.getElementById('prog-cat-filter');
+  const devFilterEl = document.getElementById('prog-dev-filter');
+  const curCat = catFilterEl.value || 'all';
+  const curDev = devFilterEl.value || 'all';
+  catFilterEl.innerHTML = `<option value="all">Toutes catégories</option>${roadmap.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}`;
+  catFilterEl.value = curCat;
+  // Liste des devs : workspace actif + ceux déjà référencés dans la roadmap
+  const fromState = (state.devs || []).map(d => d.name);
+  const fromItems = (roadmap.items || []).map(it => it.devName).filter(Boolean);
+  const allDevs = [...new Set([...fromState, ...fromItems])].sort();
+  devFilterEl.innerHTML = `<option value="all">Tous les devs</option><option value="__none__">— Non assigné —</option>${allDevs.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}`;
+  devFilterEl.value = curDev;
+
+  // Items filtrés et triés (par date MEP croissante, items sans date à la fin)
+  let items = [...roadmap.items];
+  if (curCat !== 'all') items = items.filter(it => it.categoryId === curCat);
+  if (curDev !== 'all'){
+    if (curDev === '__none__') items = items.filter(it => !it.devName);
+    else items = items.filter(it => it.devName === curDev);
+  }
+  items.sort((a,b) => {
+    const ea = a.end || '9999-12-31';
+    const eb = b.end || '9999-12-31';
+    return ea.localeCompare(eb);
+  });
+
+  if (!items.length){
+    root.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2);font-size:13px">Aucun élément correspondant aux filtres. Clique sur <strong>+ Ajouter</strong> pour créer une fonctionnalité.</div>';
+    return;
+  }
+
+  const catOptionsHtml = roadmap.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const statusOptionsHtml = Object.entries(ROADMAP_STATUSES).map(([k,v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join('');
+  const prioOptionsHtml = Object.entries(ROADMAP_PRIORITIES).map(([k,v]) => `<option value="${k}">${v.icon} ${v.label}</option>`).join('');
+  // Options dev (state + items existants)
+  const devOptionsHtml = ['<option value="">— Non assigné —</option>']
+    .concat(allDevs.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`)).join('');
+
+  const todayStr = TODAY.toISOString().slice(0,10);
+
+  const rowsHtml = items.map(it => {
+    const cat = roadmapCatById(it.categoryId);
+    const catColor = cat ? cat.color : '#8892a4';
+    const isLate = it.status !== 'termine' && it.end && it.end < todayStr;
+    const isDone = it.status === 'termine';
+    const mepCellStyle = isLate
+      ? 'border-color: var(--danger); background: rgba(248,113,113,0.08); color: var(--danger);'
+      : (isDone ? 'border-color: rgba(110,231,183,0.4); background: rgba(110,231,183,0.05);' : '');
+    const devColor = it.devName ? (it.devColor || getDevColorByName(it.devName) || '#8892a4') : '#8892a4';
+    return `<tr data-item-id="${it.id}">
+      <td style="min-width:240px">
+        <input type="text" value="${escapeHtml(it.name)}" data-field="name" onchange="updateProgItem('${it.id}','name',this.value)" style="padding:5px 8px;font-size:12px">
+      </td>
+      <td>
+        <select data-field="categoryId" onchange="updateProgItem('${it.id}','categoryId',this.value)" style="padding:5px 6px;font-size:11px;color:${catColor}">
+          ${catOptionsHtml.replace(`value="${it.categoryId}"`,`value="${it.categoryId}" selected`)}
+        </select>
+      </td>
+      <td>
+        <select data-field="devName" onchange="updateProgItem('${it.id}','devName',this.value)" style="padding:5px 6px;font-size:11px;color:${devColor}">
+          ${devOptionsHtml.replace(`value="${escapeHtml(it.devName||'')}"`,`value="${escapeHtml(it.devName||'')}" selected`)}
+        </select>
+      </td>
+      <td>
+        <input type="date" value="${it.start||''}" data-field="start" onchange="updateProgItem('${it.id}','start',this.value)" style="padding:4px 6px;font-size:11px;width:130px">
+      </td>
+      <td>
+        <input type="date" value="${it.end||''}" data-field="end" onchange="updateProgItem('${it.id}','end',this.value)" style="padding:4px 6px;font-size:11px;width:130px;${mepCellStyle}" title="${isLate?'MEP dépassée':isDone?'Livré':'Date MEP'}">
+      </td>
+      <td>
+        <select data-field="status" onchange="updateProgItem('${it.id}','status',this.value)" style="padding:5px 6px;font-size:11px">
+          ${statusOptionsHtml.replace(`value="${it.status}"`,`value="${it.status}" selected`)}
+        </select>
+      </td>
+      <td>
+        <select data-field="priority" onchange="updateProgItem('${it.id}','priority',this.value)" style="padding:5px 6px;font-size:11px">
+          ${prioOptionsHtml.replace(`value="${it.priority}"`,`value="${it.priority}" selected`)}
+        </select>
+      </td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="edit-btn" onclick="openRoadmapItemModal('${it.id}')" title="Édition complète">✏</button>
+        <button class="edit-btn" onclick="deleteProgItem('${it.id}')" title="Supprimer" style="color:var(--danger)">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  root.innerHTML = `<div style="overflow-x:auto">
+    <table class="bilan-table" style="min-width:1000px">
+      <thead>
+        <tr>
+          <th>Fonctionnalité</th>
+          <th>Catégorie</th>
+          <th>👤 Dev responsable</th>
+          <th>Début</th>
+          <th>🚀 Date MEP</th>
+          <th>Statut</th>
+          <th>Priorité</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>
+  <div style="padding:10px 12px;font-size:11px;color:var(--text2);background:var(--surface2);border-top:1px solid var(--border)">
+    ${items.length} fonctionnalité${items.length>1?'s':''} · Trié par date MEP
+  </div>`;
+}
+
+function updateProgItem(itemId, field, value){
+  const it = roadmap.items.find(i => i.id === itemId);
+  if (!it) return;
+  if (field === 'devName'){
+    it.devName = value || '';
+    it.devColor = value ? getDevColorByName(value) : '';
+  } else if (field === 'start' || field === 'end'){
+    // Validation : la fin doit être après le début
+    if (field === 'start' && it.end && value > it.end){
+      showToast('Date début > date MEP : ignoré');
+      renderProgrammation();
+      return;
+    }
+    if (field === 'end' && it.start && value < it.start){
+      showToast('Date MEP < date début : ignoré');
+      renderProgrammation();
+      return;
+    }
+    it[field] = value;
+  } else {
+    it[field] = value;
+  }
+  saveRoadmap();
+  renderProgrammation();
+  if (document.getElementById('tab-roadmap')?.classList.contains('active')) renderRoadmap();
+}
+
+function deleteProgItem(itemId){
+  const it = roadmap.items.find(i => i.id === itemId);
+  if (!it) return;
+  if (!confirm(`Supprimer "${it.name}" de la roadmap ?`)) return;
+  roadmap.items = roadmap.items.filter(i => i.id !== itemId);
+  saveRoadmap();
+  renderProgrammation();
+  if (document.getElementById('tab-roadmap')?.classList.contains('active')) renderRoadmap();
 }
 
 // ===== ROADMAP : catégories =====
@@ -3807,7 +3987,8 @@ Object.assign(window, {
   openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock,
   renderRoadmap, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal,
   openRoadmapCategoriesModal, addRoadmapCategory, renameRoadmapCategory, recolorRoadmapCategory, deleteRoadmapCategory,
-  openImportRoadmapModal, handleRoadmapFile, confirmRoadmapImport
+  openImportRoadmapModal, handleRoadmapFile, confirmRoadmapImport,
+  renderProgrammation, updateProgItem, deleteProgItem
 });
 
 initApp().catch(e => { console.error('initApp', e); alert('Erreur connexion Firestore. Vérifie les règles de sécurité.'); });

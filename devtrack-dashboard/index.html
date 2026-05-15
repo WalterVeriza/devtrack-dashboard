@@ -589,10 +589,13 @@
     <div class="modal-title" id="modal-roadmap-item-title">+ Élément de roadmap</div>
     <input type="hidden" id="roadmap-item-id">
     <div class="form-group"><label>Nom</label><input id="roadmap-item-name" placeholder="Ex: Refonte SEO 2026"></div>
-    <div class="form-group"><label>Catégorie</label><select id="roadmap-item-category"></select></div>
+    <div class="form-row">
+      <div><label>Catégorie</label><select id="roadmap-item-category"></select></div>
+      <div><label>👤 Dev responsable</label><select id="roadmap-item-dev"></select></div>
+    </div>
     <div class="form-row">
       <div><label>Date début</label><input type="date" id="roadmap-item-start"></div>
-      <div><label>Date fin</label><input type="date" id="roadmap-item-end"></div>
+      <div><label>🚀 Date MEP</label><input type="date" id="roadmap-item-end"></div>
     </div>
     <div class="form-row">
       <div><label>Statut</label>
@@ -646,7 +649,7 @@
   <div class="modal" style="max-width:560px">
     <div class="modal-title">🗺 Import Roadmap (CSV)</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-      Colonnes attendues : <code>Nom, Catégorie, Date début, Date fin, Statut, Priorité</code><br>
+      Colonnes attendues : <code>Nom, Catégorie, Dev, Date début, Date MEP, Statut, Priorité</code><br>
       Dates : ISO (<code>2026-01-06</code>) ou français (<code>06/01/2026</code>). Catégories inconnues : créées auto.
     </div>
     <div class="form-group">
@@ -3466,18 +3469,41 @@ function onRoadmapDragEnd(){
 }
 
 // ===== ROADMAP : CRUD =====
+function fillRoadmapDevSelect(selectEl, selectedDevName){
+  // Liste les devs du workspace actif + les devs déjà référencés dans la roadmap (au cas où un autre workspace les a créés)
+  const fromState = (state.devs || []).map(d => ({ name: d.name, color: d.color }));
+  const fromItems = (roadmap.items || [])
+    .filter(it => it.devName)
+    .map(it => ({ name: it.devName, color: it.devColor || '#8892a4' }));
+  const seen = new Map();
+  [...fromState, ...fromItems].forEach(d => { if (d.name && !seen.has(d.name)) seen.set(d.name, d); });
+  const opts = ['<option value="">— Non assigné —</option>']
+    .concat([...seen.values()].map(d => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`));
+  selectEl.innerHTML = opts.join('');
+  selectEl.value = selectedDevName || '';
+}
+function getDevColorByName(name){
+  if (!name) return '';
+  const fromState = (state.devs || []).find(d => d.name === name);
+  if (fromState) return fromState.color;
+  const fromItem = (roadmap.items || []).find(it => it.devName === name && it.devColor);
+  if (fromItem) return fromItem.devColor;
+  return '#8892a4';
+}
 function openRoadmapItemModal(itemId){
   const isEdit = !!itemId;
   document.getElementById('modal-roadmap-item-title').textContent = isEdit ? '✏ Modifier l\'élément' : '+ Élément de roadmap';
   document.getElementById('roadmap-item-id').value = itemId || '';
   const catSelect = document.getElementById('roadmap-item-category');
   catSelect.innerHTML = roadmap.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  const devSelect = document.getElementById('roadmap-item-dev');
   const delBtn = document.getElementById('roadmap-item-delete-btn');
   if (isEdit){
     const it = roadmap.items.find(i => i.id === itemId);
     if (!it) return;
     document.getElementById('roadmap-item-name').value = it.name || '';
     document.getElementById('roadmap-item-category').value = it.categoryId || roadmap.categories[0]?.id || '';
+    fillRoadmapDevSelect(devSelect, it.devName || '');
     document.getElementById('roadmap-item-start').value = it.start || '';
     document.getElementById('roadmap-item-end').value = it.end || '';
     document.getElementById('roadmap-item-status').value = it.status || 'a_planifier';
@@ -3486,6 +3512,7 @@ function openRoadmapItemModal(itemId){
   } else {
     document.getElementById('roadmap-item-name').value = '';
     document.getElementById('roadmap-item-category').value = roadmap.categories[0]?.id || '';
+    fillRoadmapDevSelect(devSelect, '');
     const today = TODAY.toISOString().slice(0,10);
     const in60 = new Date(TODAY.getTime() + 60*86400000).toISOString().slice(0,10);
     document.getElementById('roadmap-item-start').value = today;
@@ -3501,6 +3528,8 @@ function saveRoadmapItem(){
   const id = document.getElementById('roadmap-item-id').value;
   const name = document.getElementById('roadmap-item-name').value.trim();
   const categoryId = document.getElementById('roadmap-item-category').value;
+  const devName = document.getElementById('roadmap-item-dev').value || '';
+  const devColor = devName ? getDevColorByName(devName) : '';
   const start = document.getElementById('roadmap-item-start').value;
   const end = document.getElementById('roadmap-item-end').value;
   const status = document.getElementById('roadmap-item-status').value;
@@ -3508,13 +3537,13 @@ function saveRoadmapItem(){
   const err = document.getElementById('roadmap-item-error');
   if (!name){ err.textContent = 'Le nom est requis.'; err.style.display='block'; return; }
   if (!start || !end){ err.textContent = 'Dates requises.'; err.style.display='block'; return; }
-  if (end < start){ err.textContent = 'La date de fin doit être après la date de début.'; err.style.display='block'; return; }
+  if (end < start){ err.textContent = 'La date MEP doit être après la date de début.'; err.style.display='block'; return; }
   if (id){
     const it = roadmap.items.find(i => i.id === id);
-    if (it){ it.name = name; it.categoryId = categoryId; it.start = start; it.end = end; it.status = status; it.priority = priority; }
+    if (it){ it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor; it.start = start; it.end = end; it.status = status; it.priority = priority; }
   } else {
     const newId = 'rm_' + Date.now() + '_' + (roadmap.nextId++);
-    roadmap.items.push({ id:newId, name, categoryId, start, end, status, priority });
+    roadmap.items.push({ id:newId, name, categoryId, devName, devColor, start, end, status, priority });
   }
   closeModal('modal-roadmap-item');
   saveRoadmap();
@@ -3660,8 +3689,9 @@ function handleRoadmapFile(ev){
       const idx = {
         name:    headers.findIndex(h => h === 'nom' || h === 'name' || h === 'titre'),
         cat:     headers.findIndex(h => h === 'categorie' || h === 'category' || h === 'groupe'),
+        dev:     headers.findIndex(h => h === 'dev' || h === 'developpeur' || h === 'responsable' || h === 'assignee' || h === 'owner'),
         start:   headers.findIndex(h => h.startsWith('date debut') || h === 'debut' || h === 'start' || h.startsWith('date de debut')),
-        end:     headers.findIndex(h => h.startsWith('date fin') || h === 'fin' || h === 'end' || h.startsWith('date de fin')),
+        end:     headers.findIndex(h => h.startsWith('date fin') || h === 'fin' || h === 'end' || h.startsWith('date de fin') || h.startsWith('date mep') || h === 'mep'),
         status:  headers.findIndex(h => h === 'statut' || h === 'status' || h === 'etat'),
         prio:    headers.findIndex(h => h === 'priorite' || h === 'priority')
       };
@@ -3672,11 +3702,12 @@ function handleRoadmapFile(ev){
         const name = (cols[idx.name]||'').trim();
         if (!name) continue;
         const catName = idx.cat >= 0 ? (cols[idx.cat]||'').trim() : '';
+        const devName = idx.dev >= 0 ? (cols[idx.dev]||'').trim() : '';
         const start = idx.start >= 0 ? parseRoadmapDate(cols[idx.start]) : '';
         const end = idx.end >= 0 ? parseRoadmapDate(cols[idx.end]) : '';
         const status = idx.status >= 0 ? mapRoadmapStatus(cols[idx.status]) : 'a_planifier';
         const priority = idx.prio >= 0 ? mapRoadmapPriority(cols[idx.prio]) : 'P3';
-        rows.push({ name, catName, start, end, status, priority });
+        rows.push({ name, catName, devName, start, end, status, priority });
       }
       if (!rows.length) throw new Error('Aucune ligne exploitable.');
       _roadmapImportParsed = rows;
@@ -3713,17 +3744,20 @@ function confirmRoadmapImport(){
     const catId = cat ? cat.id : (roadmap.categories[0]?.id || null);
     const existing = roadmap.items.find(i => i.name.trim().toLowerCase() === r.name.toLowerCase()
       && (roadmapCatById(i.categoryId)?.name || '').toLowerCase() === (r.catName||'').toLowerCase());
+    const devColor = r.devName ? getDevColorByName(r.devName) : '';
     if (existing){
       existing.start = r.start || existing.start;
       existing.end = r.end || existing.end;
       existing.status = r.status;
       existing.priority = r.priority;
       if (catId) existing.categoryId = catId;
+      if (r.devName){ existing.devName = r.devName; existing.devColor = devColor; }
       nUpdate++;
     } else {
       const newId = 'rm_' + Date.now() + '_' + (roadmap.nextId++);
       roadmap.items.push({
         id: newId, name: r.name, categoryId: catId,
+        devName: r.devName || '', devColor: devColor || '',
         start: r.start || TODAY.toISOString().slice(0,10),
         end: r.end || new Date(TODAY.getTime()+60*86400000).toISOString().slice(0,10),
         status: r.status, priority: r.priority

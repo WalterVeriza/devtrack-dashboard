@@ -349,10 +349,8 @@
     <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">✕</button>
   </div>
   <div class="tabs">
-    <div class="tab active" onclick="showTab('dev')">⚡ Développement</div>
-    <div class="tab" onclick="showTab('frise')">📅 Frise</div>
+    <div class="tab active" onclick="showTab('roadmap')">🗺 Roadmap</div>
     <div class="tab" onclick="showTab('bilan')">📊 Bilan</div>
-    <div class="tab" onclick="showTab('roadmap')">🗺 Roadmap</div>
   </div>
   <div class="actions-wrap">
     <button class="btn btn-ghost btn-sm" id="actions-btn" onclick="toggleActionsMenu(event)" style="white-space:nowrap">⚙ Actions ▾</button>
@@ -370,8 +368,8 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- TAB DEV -->
-<div id="tab-dev" class="main page active">
+<!-- TAB DEV (legacy, masqué — accessible uniquement via showTab('dev') si nécessaire) -->
+<div id="tab-dev" class="main page">
   <div class="section-header">
     <div class="section-title">Équipe de développeurs</div>
     <button class="btn btn-primary btn-sm" onclick="openModal('modal-dev')">+ Ajouter développeur</button>
@@ -450,7 +448,7 @@
 </div>
 
 <!-- TAB ROADMAP -->
-<div id="tab-roadmap" class="main page">
+<div id="tab-roadmap" class="main page active">
   <div class="section-header">
     <div>
       <div class="section-title">🗺 Roadmap produit</div>
@@ -2521,7 +2519,7 @@ function showTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{
-    if((name==='dev'&&t.textContent.includes('Développement'))||(name==='frise'&&t.textContent.includes('Frise'))||(name==='bilan'&&t.textContent.includes('Bilan'))||(name==='roadmap'&&t.textContent.includes('Roadmap')))t.classList.add('active');
+    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='bilan'&&t.textContent.includes('Bilan')))t.classList.add('active');
   });
   if(name==='frise')renderFrise();
   if(name==='bilan')renderBilan();

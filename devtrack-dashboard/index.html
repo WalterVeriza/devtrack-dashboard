@@ -264,6 +264,9 @@
   .roadmap-row-name { flex: 1; min-width: 0; font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .roadmap-row-cat { font-size: 10px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }
   .roadmap-row-status { font-size: 9px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); color: var(--text2); flex-shrink: 0; }
+  .roadmap-row-dev { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 9px; flex-shrink: 0; }
+  .roadmap-row-dev-empty { background: transparent; color: var(--text2); border: 1px dashed var(--border); font-weight: 400; }
+  .roadmap-bar-avatar { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.35); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 9px; flex-shrink: 0; margin-right: 4px; pointer-events: none; }
   .roadmap-row-track { flex: 1; position: relative; min-width: 600px; background-image: linear-gradient(to right, rgba(37,40,54,0.5) 1px, transparent 1px); background-size: var(--tick-w, 50px) 100%; }
   .roadmap-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #f87171; z-index: 2; pointer-events: none; }
   .roadmap-bar { position: absolute; top: 6px; bottom: 6px; border-radius: 4px; cursor: grab; display: flex; align-items: center; padding: 0 8px; font-size: 10px; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; user-select: none; transition: box-shadow 0.15s; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
@@ -3343,11 +3346,21 @@ function renderRoadmap(){
       const w = Math.max(20, endPx - startPx);
       const status = ROADMAP_STATUSES[it.status] || ROADMAP_STATUSES.a_planifier;
       const prio = ROADMAP_PRIORITIES[it.priority] || ROADMAP_PRIORITIES.P3;
+      const devName = it.devName || '';
+      const devColor = it.devColor || '#8892a4';
+      const devAvatar = devName
+        ? `<span class="roadmap-row-dev" title="${escapeHtml(devName)}" style="background:${devColor}22;color:${devColor};border:1px solid ${devColor}55">${avatarInitials(devName)}</span>`
+        : `<span class="roadmap-row-dev roadmap-row-dev-empty" title="Non assigné">∅</span>`;
+      const barDevAvatar = devName
+        ? `<span class="roadmap-bar-avatar" title="${escapeHtml(devName)}">${avatarInitials(devName)}</span>`
+        : '';
+      const isLate = it.status !== 'termine' && it.end && it.end < TODAY.toISOString().slice(0,10);
       return `<div class="roadmap-row" data-item-id="${it.id}">
         <div class="roadmap-row-label">
           <span class="roadmap-row-num">${idx+1}</span>
           <span class="roadmap-row-pri" title="${prio.label}">${prio.icon}</span>
-          <span class="roadmap-row-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</span>
+          ${devAvatar}
+          <span class="roadmap-row-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}${isLate?' <span class="delay-chip" style="margin-left:4px">⚠ MEP dépassée</span>':''}</span>
           <span class="roadmap-row-cat" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}55">${escapeHtml(cat.name)}</span>
           <span class="roadmap-row-status">${status.icon} ${status.label}</span>
         </div>
@@ -3357,6 +3370,7 @@ function renderRoadmap(){
                style="left:${startPx}px;width:${w}px;background:${cat.color};"
                onclick="openRoadmapItemModal('${it.id}')">
             <div class="roadmap-bar-handle left" data-handle="left"></div>
+            ${barDevAvatar}
             <span class="roadmap-bar-label">${escapeHtml(it.name)}</span>
             <div class="roadmap-bar-handle right" data-handle="right"></div>
           </div>

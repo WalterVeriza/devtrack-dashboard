@@ -407,7 +407,10 @@
 <!-- TAB BILAN -->
 <div id="tab-bilan" class="main page">
   <div class="section-header">
-    <div class="section-title">Tableau de bord général</div>
+    <div>
+      <div class="section-title">Performance de l'équipe</div>
+      <div style="color:var(--text2);font-size:11px;margin-top:2px">Suivi des mises en production de la roadmap par dev</div>
+    </div>
     <select id="bilan-period" onchange="renderBilan()" style="width:130px">
       <option value="all">Tout</option>
       <option value="week">Cette semaine</option>
@@ -421,29 +424,27 @@
       <div id="bilan-devs-perf"></div>
     </div>
     <div class="card">
-      <div class="section-title" style="margin-bottom:12px;font-size:13px">MEP prévu</div>
+      <div class="section-title" style="margin-bottom:12px;font-size:13px">🚀 Prochaines MEP</div>
       <div id="bilan-mep-summary"></div>
     </div>
   </div>
   <div class="card">
     <div class="section-header" style="margin-bottom:12px">
-      <div class="section-title" style="font-size:13px">Détail tâches & sprints</div>
+      <div class="section-title" style="font-size:13px">Détail des fonctionnalités</div>
       <div class="filter-row" style="margin:0">
-        <select id="bilan-dev-filter" onchange="renderBilan()" style="width:140px">
+        <select id="bilan-dev-filter" onchange="renderBilan()" style="width:160px">
           <option value="all">Tous les devs</option>
         </select>
-        <select id="bilan-status-filter" onchange="renderBilan()" style="width:150px">
+        <select id="bilan-status-filter" onchange="renderBilan()" style="width:170px">
           <option value="all">Tous statuts</option>
-          <option value="todo">🟦 À faire</option>
-          <option value="in_progress">⚡ En cours</option>
-          <option value="review">👀 En revue</option>
-          <option value="validated">✓ Validé</option>
-          <option value="mep_done">🚀 Livré en prod</option>
-          <option value="cancelled">❌ Annulé</option>
+          <option value="a_cadrer">📋 À cadrer</option>
+          <option value="cadrage">🛠 Cadrage</option>
+          <option value="a_planifier">📅 À planifier</option>
+          <option value="a_faire">🟦 À faire</option>
+          <option value="demarrage">🚦 Démarrage</option>
+          <option value="en_cours">⚡ En cours</option>
+          <option value="termine">✅ Terminé</option>
           <option value="late">⚠ En retard</option>
-          <option value="late_po">⏳ Revue (retard)</option>
-          <option value="inprogress">En cours</option>
-          <option value="future">Futur</option>
         </select>
       </div>
     </div>
@@ -997,6 +998,7 @@ function subscribeToRoadmap(){
     roadmapReady = true;
     if (document.getElementById('tab-roadmap')?.classList.contains('active')) renderRoadmap();
     if (document.getElementById('tab-programmation')?.classList.contains('active')) renderProgrammation();
+    if (document.getElementById('tab-bilan')?.classList.contains('active')) renderBilan();
   }, (err) => console.error('onSnapshot roadmap', err));
 }
 async function saveRoadmap(){
@@ -2345,198 +2347,223 @@ function renderFrise(){
 
 // ===== BILAN =====
 function renderBilan(){
-  const allTasks=state.chantiers.flatMap(c=>c.sprints.flatMap(s=>s.tasks));
-  const allSprints=state.chantiers.flatMap(c=>c.sprints);
-  const validatedTasks = allTasks.filter(t => { const st = taskStatus(t); return st === 'validated' || st === 'mep_done'; });
-  const lateTasks = allTasks.filter(t => taskDisplayState(t) === 'late');
-  const poWaitTasks = allTasks.filter(t => taskDisplayState(t) === 'late_po');
-  const mepReady = allTasks.filter(t => { const m = taskMepState(t); return m === 'mep_unplanned' || m === 'mep_planned' || m === 'mep_done'; });
-  const mepDone = allTasks.filter(t => taskStatus(t) === 'mep_done');
-  const cancelledTasks = allTasks.filter(t => taskStatus(t) === 'cancelled');
-  // Sprints avec cible MEP dépassée
-  const sprintsMepLate = allSprints.filter(s => sprintMepTargetLate(s)).length;
+  if (!roadmapReady){
+    document.getElementById('bilan-stats').innerHTML = '<div style="grid-column:1/-1;color:var(--text2);padding:20px;text-align:center">Chargement de la roadmap…</div>';
+    document.getElementById('bilan-devs-perf').innerHTML = '';
+    document.getElementById('bilan-mep-summary').innerHTML = '';
+    document.getElementById('bilan-detail-table').innerHTML = '';
+    return;
+  }
 
-  document.getElementById('bilan-stats').innerHTML=`
-    <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${validatedTasks.length}</div><div class="stat-label">Tâches validées</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:var(--danger)">${lateTasks.length}</div><div class="stat-label">Tâches en retard</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:#a78bfa">${poWaitTasks.length}</div><div class="stat-label">En revue (retard)</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:${sprintsMepLate?'var(--danger)':'var(--warning)'}">${mepDone.length}/${mepReady.length}${sprintsMepLate?` <span style="font-size:14px">⚠</span>`:''}</div><div class="stat-label">Tâches livrées${sprintsMepLate?` · ${sprintsMepLate} cible(s) MEP dépassée(s)`:''}</div></div>`;
+  const todayStr = TODAY.toISOString().slice(0,10);
+  const period = (document.getElementById('bilan-period')?.value) || 'all';
 
-  const devPerf=state.devs.map(dev=>{
-    const all=allTasks.filter(t=>t.dev===dev.id);
-    const tasks=all.filter(t=>taskStatus(t)!=='cancelled');
-    const done=tasks.filter(t=>{const st=taskStatus(t);return st==='validated'||st==='mep_done';}).length;
-    const rate=tasks.length?Math.round(done/tasks.length*100):0;
-    const lateCount=tasks.filter(t=>taskDisplayState(t)==='late').length;
-    return{dev,tasks:tasks.length,done,rate,lateCount};
-  }).filter(d=>d.tasks>0).sort((a,b)=>b.rate-a.rate);
+  // Bornes de période (sur la date MEP = end)
+  let periodStart = null, periodEnd = null;
+  if (period === 'week'){
+    const day = TODAY.getDay() || 7; // 1..7 (lundi=1)
+    periodStart = new Date(TODAY.getTime() - (day - 1) * 86400000);
+    periodEnd = new Date(periodStart.getTime() + 6 * 86400000);
+  } else if (period === 'month'){
+    periodStart = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+    periodEnd = new Date(TODAY.getFullYear(), TODAY.getMonth() + 1, 0);
+  }
+  const inPeriod = (it) => {
+    if (period === 'all') return true;
+    if (!it.end) return false;
+    const d = pd(it.end);
+    return d >= periodStart && d <= periodEnd;
+  };
 
-  document.getElementById('bilan-devs-perf').innerHTML=devPerf.map(d=>{
-    const color=d.rate>=80?'var(--accent)':d.rate>=50?'var(--warning)':'var(--danger)';
-    return`<div class="perf-bar-container">
-      <div class="perf-bar-label">
-        <span style="display:flex;align-items:center;gap:6px">
-          <span style="width:20px;height:20px;border-radius:50%;background:${d.dev.color}22;color:${d.dev.color};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700">${avatarInitials(d.dev.name)}</span>
-          ${d.dev.name}${d.lateCount>0?`<span class="delay-chip">+${d.lateCount} retard</span>`:''}
-        </span>
-        <span style="color:${color};font-weight:500">${d.rate}%</span>
-      </div>
-      <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${d.rate}%;background:${color}"></div></div>
-    </div>`;
-  }).join('');
+  const items = (roadmap.items || []).filter(inPeriod);
 
-  // Section MEP planifiée — par BLOC fonctionnel (Chantier × Dev)
-  // Un bloc apparaît si au moins 1 tâche validated ou mep_done dedans.
-  // Date MEP du bloc = max(mepDate) des tâches validated+mep_done.
-  // Tri: à planifier (aucune date) en haut, puis par date asc, blocs 100% livrés en bas.
-  const allBlocks = getAvancementBlocks();
-  const mepBlocks = allBlocks
-    .map(b => {
-      const eligible = b.tasks.filter(x => {
-        const st = taskStatus(x.task);
-        return st === 'validated' || st === 'mep_done';
-      });
-      if (!eligible.length) return null;
-      const datedTasks = eligible.filter(x => x.task.mepDate);
-      const maxMep = datedTasks.length
-        ? datedTasks.map(x => x.task.mepDate).sort().reverse()[0]
-        : '';
-      const totalActive = b.tasks.filter(x => taskStatus(x.task) !== 'cancelled').length;
-      const delivered = b.tasks.filter(x => taskStatus(x.task) === 'mep_done').length;
-      const validated = eligible.length;
-      const allDelivered = totalActive > 0 && delivered === totalActive;
-      return { block: b, eligible, maxMep, totalActive, delivered, validated, allDelivered };
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      // Blocs 100% livrés en bas
-      if (a.allDelivered && !b.allDelivered) return 1;
-      if (!a.allDelivered && b.allDelivered) return -1;
-      // Blocs sans date MEP en haut (à planifier)
-      const aUnp = !a.maxMep;
-      const bUnp = !b.maxMep;
-      if (aUnp && !bUnp) return -1;
-      if (!aUnp && bUnp) return 1;
-      // Par date ascendante
-      return (a.maxMep || '').localeCompare(b.maxMep || '');
-    });
+  // Catégorisation : livré (terminé), en retard (end<today && pas terminé), en cours, à venir
+  const isLate = (it) => it.status !== 'termine' && it.end && it.end < todayStr;
+  const isDone = (it) => it.status === 'termine';
+  const isInProgress = (it) => !isDone(it) && !isLate(it) && (it.status === 'en_cours' || it.status === 'demarrage');
+  const isUpcoming = (it) => !isDone(it) && !isLate(it) && !isInProgress(it);
 
-  const sumEl = document.getElementById('bilan-mep-summary');
-  if (!mepBlocks.length){
-    sumEl.innerHTML = '<div style="color:var(--text2);font-size:12px">Aucun bloc prêt pour la MEP.</div>';
-  } else {
-    sumEl.innerHTML = mepBlocks.map(({block: b, eligible, maxMep, totalActive, delivered, validated, allDelivered}) => {
-      let badge, dateLine;
-      if (allDelivered){
-        badge = '<span class="delay-chip ok">🚀 Livré</span>';
-        dateLine = maxMep ? `<span style="color:var(--text2);font-size:11px">MEP : ${fmtDate(maxMep)}</span>` : '';
-      } else if (maxMep){
-        const d = diffDays(pd(maxMep), TODAY);
-        if (d < 0) badge = `<span class="delay-chip">+${-d}j retard MEP</span>`;
-        else if (d === 0) badge = '<span class="badge badge-yellow">Aujourd\'hui</span>';
-        else badge = `<span class="badge badge-gray">Dans ${d}j</span>`;
-        dateLine = `<span style="color:var(--warning);font-size:11px">📅 ${fmtDate(maxMep)}</span>`;
-      } else {
-        badge = '<span class="badge badge-purple">À planifier</span>';
-        dateLine = '<span style="color:var(--text2);font-size:11px">Aucune date MEP</span>';
-      }
-      const devName = b.dev ? b.dev.name : 'Non assigné';
-      const devColor = b.dev ? b.dev.color : 'var(--text2)';
-      const blockKey = b.key;
-      const tasksHtml = b.tasks.map(x => {
-        const st = taskStatus(x.task);
-        const info = STATUS_INFO[st] || STATUS_INFO.todo;
-        const sid = x.sprint.id;
-        let taskBadge, taskDate;
-        if (st === 'mep_done'){
-          taskBadge = '<span class="delay-chip ok">🚀</span>';
-          taskDate = `<input type="date" class="mep-date-inline" value="${x.task.mepDate||''}" onchange="setTaskMepDate(${sid},${x.task.id},this.value)" title="Date MEP (éditable)">`;
-        } else if (st === 'validated'){
-          if (x.task.mepDate){
-            const d = diffDays(pd(x.task.mepDate), TODAY);
-            taskBadge = d < 0 ? `<span class="delay-chip">+${-d}j</span>` : d === 0 ? '<span class="badge badge-yellow">Auj.</span>' : `<span class="badge badge-gray">${d}j</span>`;
-          } else {
-            taskBadge = '<span class="badge badge-purple">À planifier</span>';
-          }
-          taskDate = `<input type="date" class="mep-date-inline" value="${x.task.mepDate||''}" onchange="setTaskMepDate(${sid},${x.task.id},this.value)">`;
-        } else {
-          taskBadge = `<span class="badge badge-gray">${info.icon} ${info.short}</span>`;
-          taskDate = `<input type="date" class="mep-date-inline" value="${x.task.mepDate||''}" onchange="setTaskMepDate(${sid},${x.task.id},this.value)" title="Date MEP (éditable)">`;
-        }
-        const action = st === 'mep_done'
-          ? `<button class="mep-action-btn" onclick="setTaskStatus(${sid},${x.task.id},'validated')" title="Marquer non livrée">↶</button>`
-          : st === 'validated'
-            ? `<button class="mep-action-btn ok" onclick="setTaskStatus(${sid},${x.task.id},'mep_done')" title="Marquer livrée">✓</button>`
-            : '<span style="width:24px"></span>';
-        return `<div class="mep-block-task">
-          <span class="mep-block-task-status" title="${info.label}">${info.icon}</span>
-          <span class="mep-block-task-name" title="${escapeHtml(x.task.name)}">${x.task.name}</span>
-          ${taskDate}
-          ${taskBadge}
-          ${action}
+  const doneItems = items.filter(isDone);
+  const lateItems = items.filter(isLate);
+  const inProgressItems = items.filter(isInProgress);
+  const upcomingItems = items.filter(isUpcoming);
+
+  document.getElementById('bilan-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${doneItems.length}</div><div class="stat-label">MEP livrées</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--danger)">${lateItems.length}</div><div class="stat-label">MEP en retard</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--accent4)">${inProgressItems.length}</div><div class="stat-label">En cours / démarrage</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--warning)">${upcomingItems.length}</div><div class="stat-label">À venir</div></div>`;
+
+  // Performance par dev (basée sur items roadmap)
+  const byDev = new Map();
+  items.forEach(it => {
+    const name = it.devName || '__none__';
+    if (!byDev.has(name)) byDev.set(name, { name, color: it.devColor || (name === '__none__' ? '#8892a4' : getDevColorByName(name)) || '#8892a4', items: [] });
+    byDev.get(name).items.push(it);
+  });
+  const devPerf = [...byDev.values()].map(d => {
+    const total = d.items.length;
+    const done = d.items.filter(isDone).length;
+    const late = d.items.filter(isLate).length;
+    const inprog = d.items.filter(isInProgress).length;
+    const upcoming = d.items.filter(isUpcoming).length;
+    // Taux de livraison à temps : items livrés / items dont l'échéance est passée (livré + en retard)
+    const dueItems = done + late;
+    const rate = dueItems ? Math.round((done / dueItems) * 100) : (total ? 0 : 100);
+    return { name: d.name, color: d.color, total, done, late, inprog, upcoming, rate, dueItems };
+  })
+  .filter(d => d.name !== '__none__' || d.total > 0)
+  .sort((a, b) => {
+    // Devs avec retard en haut, puis par taux décroissant
+    if (a.late !== b.late) return b.late - a.late;
+    return b.rate - a.rate;
+  });
+
+  document.getElementById('bilan-devs-perf').innerHTML = devPerf.length === 0
+    ? '<div style="color:var(--text2);font-size:12px;padding:10px 0">Aucun élément dans la roadmap pour cette période.</div>'
+    : devPerf.map(d => {
+        const displayName = d.name === '__none__' ? 'Non assigné' : d.name;
+        const color = d.late > 0 ? 'var(--danger)' : d.rate >= 80 ? 'var(--accent)' : d.rate >= 50 ? 'var(--warning)' : 'var(--text2)';
+        const rateLabel = d.dueItems > 0 ? `${d.rate}%` : '—';
+        const rateColor = d.dueItems > 0 ? color : 'var(--text2)';
+        return `<div class="perf-bar-container" style="margin-bottom:12px">
+          <div class="perf-bar-label">
+            <span style="display:flex;align-items:center;gap:6px">
+              <span style="width:22px;height:22px;border-radius:50%;background:${d.color}22;color:${d.color};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${avatarInitials(displayName)}</span>
+              <span style="color:var(--text);font-weight:500">${escapeHtml(displayName)}</span>
+              ${d.late > 0 ? `<span class="delay-chip">⚠ ${d.late} retard${d.late>1?'s':''}</span>` : ''}
+            </span>
+            <span style="color:${rateColor};font-weight:500">${rateLabel} <span style="color:var(--text2);font-size:10px;font-weight:400">(${d.done}/${d.dueItems||0} à l'heure)</span></span>
+          </div>
+          <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${d.dueItems ? d.rate : 0}%;background:${color}"></div></div>
+          <div style="display:flex;gap:10px;margin-top:4px;font-size:10px;color:var(--text2)">
+            <span>${d.total} total</span>
+            <span>·</span>
+            <span style="color:var(--accent)">${d.done} livrés</span>
+            <span>·</span>
+            <span style="color:var(--accent4)">${d.inprog} en cours</span>
+            <span>·</span>
+            <span>${d.upcoming} à venir</span>
+            ${d.late > 0 ? `<span>·</span><span style="color:var(--danger)">${d.late} en retard</span>` : ''}
+          </div>
         </div>`;
       }).join('');
-      return `<div class="mep-block-item" id="mep-block-${blockKey}">
-        <div class="mep-block-header" onclick="toggleMepBlock('${blockKey}')">
-          <span class="mep-block-toggle">▸</span>
-          <div class="mep-block-info">
-            <div class="mep-block-name" title="${escapeHtml(b.name)}">${b.isCustom ? '✏ ' : ''}${b.name}</div>
-            <div class="mep-block-meta">
-              <span style="color:${devColor}">${devName}</span>
-              <span>·</span>
-              <span>${b.chantier.name}</span>
-              <span>·</span>
-              <span>${validated}/${totalActive} livrés/validés</span>
-            </div>
-          </div>
-          <div class="mep-block-actions">
-            ${dateLine}
-            ${badge}
-            <button class="mep-action-btn" onclick="event.stopPropagation();openEditBlock('${blockKey}')" title="Renommer le bloc">✏</button>
+
+  // Section "Prochaines MEP" : items à venir, triés par date MEP croissante (en retard d'abord)
+  const sumEl = document.getElementById('bilan-mep-summary');
+  const upcomingForList = items
+    .filter(it => !isDone(it))
+    .sort((a, b) => {
+      const ea = a.end || '9999-12-31';
+      const eb = b.end || '9999-12-31';
+      return ea.localeCompare(eb);
+    })
+    .slice(0, 12);
+  if (!upcomingForList.length){
+    sumEl.innerHTML = '<div style="color:var(--text2);font-size:12px">Aucune MEP à venir.</div>';
+  } else {
+    sumEl.innerHTML = upcomingForList.map(it => {
+      const cat = roadmapCatById(it.categoryId);
+      const catColor = cat ? cat.color : '#8892a4';
+      const late = isLate(it);
+      let badge, dateLine;
+      if (late){
+        const d = diffDays(pd(it.end), TODAY);
+        badge = `<span class="delay-chip">+${-d}j retard</span>`;
+        dateLine = `<span style="color:var(--danger);font-size:11px">📅 ${fmtDate(it.end)}</span>`;
+      } else if (it.end){
+        const d = diffDays(pd(it.end), TODAY);
+        if (d === 0) badge = '<span class="badge badge-yellow">Aujourd\'hui</span>';
+        else if (d <= 7) badge = `<span class="badge badge-yellow">Dans ${d}j</span>`;
+        else badge = `<span class="badge badge-gray">Dans ${d}j</span>`;
+        dateLine = `<span style="color:var(--warning);font-size:11px">📅 ${fmtDate(it.end)}</span>`;
+      } else {
+        badge = '<span class="badge badge-purple">À planifier</span>';
+        dateLine = '<span style="color:var(--text2);font-size:11px">Aucune date</span>';
+      }
+      const devName = it.devName || 'Non assigné';
+      const devColor = it.devName ? (it.devColor || getDevColorByName(it.devName) || '#8892a4') : 'var(--text2)';
+      return `<div class="mep-row-item" style="cursor:pointer" onclick="openRoadmapItemModal('${it.id}')">
+        <div class="mep-row-info">
+          <div class="mep-row-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</div>
+          <div class="mep-row-ctx">
+            <span style="color:${devColor}">${escapeHtml(devName)}</span>
+            <span style="color:var(--text2)"> · </span>
+            <span style="color:${catColor}">${escapeHtml(cat ? cat.name : 'Sans catégorie')}</span>
           </div>
         </div>
-        <div class="mep-block-tasks">${tasksHtml}</div>
+        <div class="mep-row-actions">
+          ${dateLine}
+          ${badge}
+        </div>
       </div>`;
     }).join('');
   }
 
-  const devFilter=document.getElementById('bilan-dev-filter');
-  const curV=devFilter.value;
-  devFilter.innerHTML=`<option value="all">Tous les devs</option>${state.devs.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}`;
-  devFilter.value=curV;
+  // Filtres de la table détail
+  const devFilter = document.getElementById('bilan-dev-filter');
+  const curV = devFilter.value || 'all';
+  const allDevNames = [...new Set([
+    ...(state.devs || []).map(d => d.name),
+    ...(roadmap.items || []).map(it => it.devName).filter(Boolean)
+  ])].sort();
+  devFilter.innerHTML = `<option value="all">Tous les devs</option><option value="__none__">— Non assigné —</option>${allDevNames.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}`;
+  devFilter.value = curV;
 
-  const dvf=devFilter.value;const stf=document.getElementById('bilan-status-filter').value;
-  let rows=[];
-  state.chantiers.forEach(c=>c.sprints.forEach(s=>s.tasks.forEach(t=>{
-    if(t.archived)return;
-    const st=taskStatus(t);const ds=taskDisplayState(t);const dev=getDevById(t.dev);
-    if(dvf!=='all'&&t.dev!==parseInt(dvf))return;
-    if(stf!=='all'){
-      if(stf==='late' && ds!=='late') return;
-      else if(stf==='late_po' && ds!=='late_po') return;
-      else if(stf!=='late' && stf!=='late_po' && st!==stf) return;
+  const dvf = devFilter.value;
+  const stf = document.getElementById('bilan-status-filter').value;
+
+  let rows = items.filter(it => {
+    if (dvf !== 'all'){
+      if (dvf === '__none__' && it.devName) return false;
+      if (dvf !== '__none__' && it.devName !== dvf) return false;
     }
-    if(!matchesSearch(t,s,c))return;
-    rows.push({t,s,c,st,ds,dev,delay:getDelay(t),poWait:getPoWait(t)});
-  })));
+    if (stf !== 'all'){
+      if (stf === 'late' && !isLate(it)) return false;
+      else if (stf !== 'late' && it.status !== stf) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    // En retard d'abord, puis par date MEP
+    const aLate = isLate(a), bLate = isLate(b);
+    if (aLate && !bLate) return -1;
+    if (!aLate && bLate) return 1;
+    return (a.end || '9999-12-31').localeCompare(b.end || '9999-12-31');
+  });
 
-  const table=document.getElementById('bilan-detail-table');
-  table.innerHTML=`<thead><tr><th>Tâche</th><th>Développeur</th><th>Chantier / Sprint</th><th>Début</th><th>Fin prévue</th><th>Statut</th><th>Retard</th><th>MEP</th></tr></thead>
-  <tbody>${rows.map(({t,s,c,st,ds,dev,delay,poWait})=>{
-    const info = STATUS_INFO[st] || STATUS_INFO.todo;
-    const badgeClass = st==='validated'||st==='mep_done'?'badge-green':st==='review'?'badge-purple':st==='in_progress'?'badge-yellow':'badge-gray';
-    const badge = `<span class="badge ${badgeClass}">${info.icon} ${info.short}</span>`;
+  const table = document.getElementById('bilan-detail-table');
+  if (!rows.length){
+    table.innerHTML = '<tbody><tr><td style="text-align:center;color:var(--text2);padding:20px">Aucun élément correspondant aux filtres.</td></tr></tbody>';
+    return;
+  }
+  table.innerHTML = `<thead><tr><th>Fonctionnalité</th><th>Catégorie</th><th>Dev responsable</th><th>Début</th><th>🚀 Date MEP</th><th>Statut</th><th>Retard</th></tr></thead>
+  <tbody>${rows.map(it => {
+    const cat = roadmapCatById(it.categoryId);
+    const catColor = cat ? cat.color : '#8892a4';
+    const status = ROADMAP_STATUSES[it.status] || ROADMAP_STATUSES.a_planifier;
+    const late = isLate(it);
+    const done = isDone(it);
+    const badgeClass = done ? 'badge-green' : it.status === 'en_cours' || it.status === 'demarrage' ? 'badge-yellow' : it.status === 'cadrage' ? 'badge-purple' : 'badge-gray';
+    const badge = `<span class="badge ${badgeClass}">${status.icon} ${status.label}</span>`;
     let delayCell;
-    if (ds==='late') delayCell = `<span class="delay-chip">+${delay}j</span>`;
-    else if (ds==='late_po') delayCell = `<span class="delay-chip wait">⏳ +${poWait}j</span>`;
-    else if (ds==='validated' || ds==='mep_done') delayCell = '<span class="delay-chip ok">OK</span>';
-    else delayCell = '<span style="color:var(--text2);font-size:11px">—</span>';
-    const mepCell = t.mepDate ? fmtDate(t.mepDate) : '<span style="color:var(--text2);font-size:11px">—</span>';
-    return`<tr><td>${t.name}</td><td>${dev?`<span style="color:${dev.color}">${dev.name}</span>`:'—'}</td>
-      <td><span style="color:var(--text2)">${c.name}</span> › ${s.name}</td>
-      <td>${fmtDate(t.start)}</td><td>${fmtDate(t.end)}</td><td>${badge}</td>
+    if (late){
+      const d = diffDays(pd(it.end), TODAY);
+      delayCell = `<span class="delay-chip">+${-d}j</span>`;
+    } else if (done){
+      delayCell = '<span class="delay-chip ok">✓ Livré</span>';
+    } else {
+      delayCell = '<span style="color:var(--text2);font-size:11px">—</span>';
+    }
+    const devName = it.devName || '—';
+    const devColor = it.devName ? (it.devColor || getDevColorByName(it.devName) || '#8892a4') : 'var(--text2)';
+    return `<tr style="cursor:pointer" onclick="openRoadmapItemModal('${it.id}')">
+      <td>${escapeHtml(it.name)}</td>
+      <td><span style="color:${catColor}">${escapeHtml(cat ? cat.name : 'Sans catégorie')}</span></td>
+      <td><span style="color:${devColor}">${escapeHtml(devName)}</span></td>
+      <td>${fmtDate(it.start)}</td>
+      <td>${fmtDate(it.end)}</td>
+      <td>${badge}</td>
       <td>${delayCell}</td>
-      <td>${mepCell}</td>
     </tr>`;
   }).join('')}</tbody>`;
 }
@@ -3587,6 +3614,7 @@ function saveRoadmapItem(){
   saveRoadmap();
   renderRoadmap();
   if (document.getElementById('tab-programmation')?.classList.contains('active')) renderProgrammation();
+  if (document.getElementById('tab-bilan')?.classList.contains('active')) renderBilan();
 }
 function deleteRoadmapItemFromModal(){
   const id = document.getElementById('roadmap-item-id').value;
@@ -3741,6 +3769,7 @@ function updateProgItem(itemId, field, value){
   saveRoadmap();
   renderProgrammation();
   if (document.getElementById('tab-roadmap')?.classList.contains('active')) renderRoadmap();
+  if (document.getElementById('tab-bilan')?.classList.contains('active')) renderBilan();
 }
 
 function deleteProgItem(itemId){
@@ -3751,6 +3780,7 @@ function deleteProgItem(itemId){
   saveRoadmap();
   renderProgrammation();
   if (document.getElementById('tab-roadmap')?.classList.contains('active')) renderRoadmap();
+  if (document.getElementById('tab-bilan')?.classList.contains('active')) renderBilan();
 }
 
 // ===== ROADMAP : catégories =====

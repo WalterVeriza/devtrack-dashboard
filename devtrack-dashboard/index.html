@@ -497,6 +497,7 @@
       <select id="prog-dev-filter" onchange="renderProgrammation()" style="width:160px">
         <option value="all">Tous les devs</option>
       </select>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('modal-dev')" title="Ajouter un nouveau développeur à l'équipe">👤 + Dev</button>
       <button class="btn btn-primary btn-sm" onclick="openRoadmapItemModal()">+ Ajouter</button>
     </div>
   </div>
@@ -1625,10 +1626,19 @@ function closeModal(id){document.getElementById(id).classList.add('hidden');}
 
 function addDev(){
   const name=document.getElementById('new-dev-name').value.trim();if(!name)return;
+  // Anti-doublon (insensible a la casse)
+  if (state.devs.some(d => d.name.toLowerCase() === name.toLowerCase())){
+    showToast('Ce dev existe déjà dans l\'équipe');
+    return;
+  }
   const role=document.getElementById('new-dev-role').value;
   const colors=['#6ee7b7','#60a5fa','#f472b6','#fbbf24','#a78bfa','#fb923c','#34d399','#e879f9'];
   state.devs.push({id:state.nextId.dev++,name,role,color:colors[state.devs.length%colors.length]});
-  closeModal('modal-dev');document.getElementById('new-dev-name').value='';saveState();render();
+  closeModal('modal-dev');
+  document.getElementById('new-dev-name').value='';
+  saveState();
+  render();
+  showToast('Dev ajouté à l\'équipe : ' + name);
 }
 function addChantier(){
   const name=document.getElementById('new-chantier-name').value.trim();if(!name)return;

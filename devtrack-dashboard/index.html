@@ -127,6 +127,21 @@
   .perf-bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
   .perf-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
   .bilan-table { width: 100%; border-collapse: collapse; }
+  /* Améliorations */
+  .amelio-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .amelio-table th { text-align: left; padding: 8px 12px; font-size: 10px; color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; font-weight: 500; letter-spacing: 0.3px; }
+  .amelio-table td { padding: 9px 12px; border-bottom: 1px solid rgba(37,40,54,0.5); vertical-align: middle; }
+  .amelio-table tr:last-child td { border-bottom: none; }
+  .amelio-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .amelio-prio { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .amelio-prio.p1 { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+  .amelio-prio.p2 { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .amelio-prio.p3 { background: rgba(110,231,183,0.15); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
+  .amelio-status-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .amelio-status-badge.ouvert { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .amelio-status-badge.en_cours { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .amelio-status-badge.fait { background: rgba(110,231,183,0.15); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
+  .amelio-status-badge.rejete { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
   .bilan-table th { text-align: left; padding: 8px 12px; font-size: 10px; color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
   .bilan-table td { padding: 10px 12px; border-bottom: 1px solid rgba(37,40,54,0.5); font-size: 12px; vertical-align: middle; }
   .filter-row { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
@@ -241,6 +256,8 @@
   .mep-block-task .mep-date-inline { width: 100px; padding: 2px 4px; font-size: 10px; }
   .mep-block-task .mep-action-btn { width: 22px; height: 20px; font-size: 10px; }
   .mep-block-task .badge, .mep-block-task .delay-chip { font-size: 9px; padding: 1px 5px; }
+  /* ===== ROADMAP TOOLTIP ===== */
+  #roadmap-name-tooltip { display:none; position:fixed; z-index:9999; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:6px 10px; border-radius:6px; font-size:12px; pointer-events:none; max-width:420px; box-shadow:0 4px 16px rgba(0,0,0,0.5); white-space:normal; word-break:break-word; line-height:1.5; }
   /* ===== ROADMAP ===== */
   .roadmap-container { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .roadmap-scroll { overflow-x: auto; overflow-y: visible; position: relative; }
@@ -355,6 +372,8 @@
     <div class="tab active" onclick="showTab('roadmap')">🗺 Roadmap</div>
     <div class="tab" onclick="showTab('programmation')">📝 Programmation</div>
     <div class="tab" onclick="showTab('bilan')">📊 Bilan</div>
+    <div class="tab" onclick="openImportModal()" style="color:var(--accent3)">📥 Jira</div>
+    <div class="tab" onclick="showTab('ameliorations')">💡 Améliorations</div>
   </div>
   <div class="actions-wrap">
     <button class="btn btn-ghost btn-sm" id="actions-btn" onclick="toggleActionsMenu(event)" style="white-space:nowrap">⚙ Actions ▾</button>
@@ -432,6 +451,10 @@
     <div class="section-header" style="margin-bottom:12px">
       <div class="section-title" style="font-size:13px">Détail des fonctionnalités</div>
       <div class="filter-row" style="margin:0">
+        <div class="search-box">
+          <input type="text" id="bilan-local-search" placeholder="🔍 Rechercher..." oninput="onBilanSearch(event)">
+          <button class="search-clear" id="bilan-local-search-clear" onclick="clearBilanLocalSearch()" style="display:none">✕</button>
+        </div>
         <select id="bilan-dev-filter" onchange="renderBilan()" style="width:160px">
           <option value="all">Tous les devs</option>
         </select>
@@ -502,6 +525,35 @@
     </div>
   </div>
   <div id="prog-root" class="roadmap-container"></div>
+</div>
+
+<!-- TAB AMÉLIORATIONS -->
+<div id="tab-ameliorations" class="main page">
+  <div class="section-header">
+    <div>
+      <div class="section-title">💡 Améliorations site</div>
+      <div style="color:var(--text2);font-size:11px;margin-top:2px">Remontées d'améliorations sur le site modifié</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="amelio-priority-filter" onchange="renderAmeliorations()" style="width:130px">
+        <option value="all">Toutes priorités</option>
+        <option value="P1">🔴 P1 — Critique</option>
+        <option value="P2">🟡 P2 — Importante</option>
+        <option value="P3">🟢 P3 — Mineure</option>
+      </select>
+      <select id="amelio-status-filter" onchange="renderAmeliorations()" style="width:130px">
+        <option value="all">Tous statuts</option>
+        <option value="ouvert">🔵 Ouvert</option>
+        <option value="en_cours">⚡ En cours</option>
+        <option value="fait">✅ Fait</option>
+        <option value="rejete">❌ Rejeté</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openAmeliorationModal()">+ Nouvelle amélioration</button>
+    </div>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto"><table class="amelio-table" id="amelio-table"></table></div>
+  </div>
 </div>
 
 <!-- MODALS -->
@@ -687,6 +739,39 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-roadmap-import')">Annuler</button>
       <button class="btn btn-primary" id="roadmap-import-confirm-btn" onclick="confirmRoadmapImport()" disabled>Importer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-amelioration">
+  <div class="modal">
+    <div class="modal-title" id="modal-amelio-title">+ Nouvelle amélioration</div>
+    <input type="hidden" id="amelio-id">
+    <div class="form-group"><label>Titre *</label><input id="amelio-title" placeholder="Ex: Formulaire de contact cassé"></div>
+    <div class="form-group"><label>Page concernée</label><input id="amelio-page" placeholder="Ex: /contact, /home, ..."></div>
+    <div class="form-group"><label>Description</label><textarea id="amelio-desc" rows="3" placeholder="Décris l'amélioration attendue ou le problème constaté..." style="resize:vertical"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Priorité</label>
+        <select id="amelio-priority">
+          <option value="P1">🔴 P1 — Critique</option>
+          <option value="P2" selected>🟡 P2 — Importante</option>
+          <option value="P3">🟢 P3 — Mineure</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Statut</label>
+        <select id="amelio-status">
+          <option value="ouvert">🔵 Ouvert</option>
+          <option value="en_cours">⚡ En cours</option>
+          <option value="fait">✅ Fait</option>
+          <option value="rejete">❌ Rejeté</option>
+        </select>
+      </div>
+    </div>
+    <div class="error-msg" id="amelio-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" id="amelio-delete-btn" onclick="deleteAmelioration()" style="color:var(--danger);display:none;margin-right:auto">🗑 Supprimer</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-amelioration')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveAmelioration()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -971,6 +1056,7 @@ async function saveState() {
       devs: state.devs,
       chantiers: state.chantiers,
       blockOverrides: state.blockOverrides || {},
+      ameliorations: state.ameliorations || [],
       nextId: state.nextId,
       _migrated_v2: true
     }, { merge: true });
@@ -1065,6 +1151,7 @@ function subscribeToActiveWorkspace(){
       devs: data.devs || [],
       chantiers: data.chantiers || [],
       blockOverrides: data.blockOverrides || {},
+      ameliorations: data.ameliorations || [],
       nextId: data.nextId || { dev: 1, chantier: 1, sprint: 1, task: 1 }
     };
     render();
@@ -2532,9 +2619,13 @@ function renderBilan(){
       if (stf === 'late' && !isLate(it)) return false;
       else if (stf !== 'late' && it.status !== stf) return false;
     }
+    if (bilanSearchQuery){
+      const cat = roadmapCatById(it.categoryId);
+      const hay = [it.name, it.devName||'', cat?.name||''].join(' ').toLowerCase();
+      if (!hay.includes(bilanSearchQuery)) return false;
+    }
     return true;
   }).sort((a, b) => {
-    // En retard d'abord, puis par date MEP
     const aLate = isLate(a), bLate = isLate(b);
     if (aLate && !bLate) return -1;
     if (!aLate && bLate) return 1;
@@ -2578,18 +2669,117 @@ function renderBilan(){
   }).join('')}</tbody>`;
 }
 
+// ===== AMÉLIORATIONS =====
+const AMELIO_PRIO = { P1:{icon:'🔴',label:'P1',cls:'p1'}, P2:{icon:'🟡',label:'P2',cls:'p2'}, P3:{icon:'🟢',label:'P3',cls:'p3'} };
+const AMELIO_STATUS = { ouvert:{icon:'🔵',label:'Ouvert',cls:'ouvert'}, en_cours:{icon:'⚡',label:'En cours',cls:'en_cours'}, fait:{icon:'✅',label:'Fait',cls:'fait'}, rejete:{icon:'❌',label:'Rejeté',cls:'rejete'} };
+
+function renderAmeliorations(){
+  const prioF = document.getElementById('amelio-priority-filter')?.value || 'all';
+  const statF = document.getElementById('amelio-status-filter')?.value || 'all';
+  const items = (state.ameliorations || [])
+    .filter(a => (prioF==='all'||a.priority===prioF) && (statF==='all'||a.status===statF))
+    .sort((a,b)=>{ const o={P1:0,P2:1,P3:2}; return (o[a.priority]||1)-(o[b.priority]||1); });
+  const table = document.getElementById('amelio-table');
+  if (!table) return;
+  if (!items.length){
+    table.innerHTML = `<tbody><tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text2)">Aucune amélioration${prioF!=='all'||statF!=='all'?' pour ces filtres':' enregistrée'}. Clique sur <strong>+ Nouvelle amélioration</strong>.</td></tr></tbody>`;
+    return;
+  }
+  table.innerHTML = `<thead><tr>
+    <th style="width:32px">#</th><th>Titre</th><th>Page</th><th>Priorité</th><th>Statut</th><th>Date</th><th style="width:44px"></th>
+  </tr></thead><tbody>${items.map((a,i)=>{
+    const p = AMELIO_PRIO[a.priority]||AMELIO_PRIO.P2;
+    const s = AMELIO_STATUS[a.status]||AMELIO_STATUS.ouvert;
+    const date = a.createdAt ? fmtDate(a.createdAt.slice(0,10)) : '—';
+    return `<tr>
+      <td style="color:var(--text2);font-size:11px">${i+1}</td>
+      <td>
+        <div style="font-weight:500">${escapeHtml(a.title)}</div>
+        ${a.description?`<div style="font-size:11px;color:var(--text2);margin-top:2px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(a.description)}">${escapeHtml(a.description)}</div>`:''}
+      </td>
+      <td style="color:var(--text2);font-size:12px">${escapeHtml(a.page||'—')}</td>
+      <td><span class="amelio-prio ${p.cls}">${p.icon} ${p.label}</span></td>
+      <td><span class="amelio-status-badge ${s.cls}">${s.icon} ${s.label}</span></td>
+      <td style="color:var(--text2);font-size:11px;white-space:nowrap">${date}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openAmeliorationModal(${a.id})" style="padding:3px 8px">✏</button></td>
+    </tr>`;
+  }).join('')}</tbody>`;
+}
+
+function openAmeliorationModal(id){
+  const isEdit = id != null;
+  document.getElementById('modal-amelio-title').textContent = isEdit ? '✏ Modifier l\'amélioration' : '+ Nouvelle amélioration';
+  document.getElementById('amelio-id').value = id || '';
+  document.getElementById('amelio-error').style.display = 'none';
+  const delBtn = document.getElementById('amelio-delete-btn');
+  if (isEdit){
+    const a = (state.ameliorations||[]).find(x => x.id === id);
+    if (!a) return;
+    document.getElementById('amelio-title').value = a.title||'';
+    document.getElementById('amelio-page').value = a.page||'';
+    document.getElementById('amelio-desc').value = a.description||'';
+    document.getElementById('amelio-priority').value = a.priority||'P2';
+    document.getElementById('amelio-status').value = a.status||'ouvert';
+    if (delBtn) delBtn.style.display = '';
+  } else {
+    document.getElementById('amelio-title').value = '';
+    document.getElementById('amelio-page').value = '';
+    document.getElementById('amelio-desc').value = '';
+    document.getElementById('amelio-priority').value = 'P2';
+    document.getElementById('amelio-status').value = 'ouvert';
+    if (delBtn) delBtn.style.display = 'none';
+  }
+  openModal('modal-amelioration');
+}
+
+function saveAmelioration(){
+  const title = document.getElementById('amelio-title').value.trim();
+  const errEl = document.getElementById('amelio-error');
+  if (!title){ errEl.textContent = 'Le titre est requis.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  if (!Array.isArray(state.ameliorations)) state.ameliorations = [];
+  const rawId = document.getElementById('amelio-id').value;
+  const data = {
+    title,
+    page: document.getElementById('amelio-page').value.trim(),
+    description: document.getElementById('amelio-desc').value.trim(),
+    priority: document.getElementById('amelio-priority').value,
+    status: document.getElementById('amelio-status').value
+  };
+  if (rawId){
+    const id = parseInt(rawId);
+    const idx = state.ameliorations.findIndex(a => a.id === id);
+    if (idx >= 0) state.ameliorations[idx] = { ...state.ameliorations[idx], ...data };
+  } else {
+    state.ameliorations.push({ id: Date.now(), createdAt: new Date().toISOString(), ...data });
+  }
+  closeModal('modal-amelioration');
+  saveState();
+  renderAmeliorations();
+}
+
+function deleteAmelioration(){
+  const id = parseInt(document.getElementById('amelio-id').value);
+  if (!id || !confirm('Supprimer cette amélioration ?')) return;
+  state.ameliorations = (state.ameliorations||[]).filter(a => a.id !== id);
+  closeModal('modal-amelioration');
+  saveState();
+  renderAmeliorations();
+}
+
 // ===== TABS =====
 function showTab(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{
-    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='programmation'&&t.textContent.includes('Programmation'))||(name==='bilan'&&t.textContent.includes('Bilan')))t.classList.add('active');
+    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='programmation'&&t.textContent.includes('Programmation'))||(name==='bilan'&&t.textContent.includes('Bilan'))||(name==='ameliorations'&&t.textContent.includes('Améliorations')))t.classList.add('active');
   });
   if(name==='frise')renderFrise();
   if(name==='bilan')renderBilan();
   if(name==='roadmap')renderRoadmap();
   if(name==='programmation')renderProgrammation();
+  if(name==='ameliorations')renderAmeliorations();
 }
 
 function render(){
@@ -2940,6 +3130,20 @@ function toggleShowArchivedTasks(sprintId){
   if (showArchivedFor.has(sprintId)) showArchivedFor.delete(sprintId);
   else showArchivedFor.add(sprintId);
   render();
+}
+
+// ===== BILAN LOCAL SEARCH =====
+let bilanSearchQuery = '';
+function onBilanSearch(ev){
+  bilanSearchQuery = (ev.target.value || '').trim().toLowerCase();
+  document.getElementById('bilan-local-search-clear').style.display = bilanSearchQuery ? 'flex' : 'none';
+  renderBilan();
+}
+function clearBilanLocalSearch(){
+  bilanSearchQuery = '';
+  const i = document.getElementById('bilan-local-search'); if (i) i.value = '';
+  document.getElementById('bilan-local-search-clear').style.display = 'none';
+  renderBilan();
 }
 
 // ===== SEARCH =====
@@ -3455,6 +3659,32 @@ function renderRoadmap(){
     ${groupsHtml}
   </div>`;
   attachRoadmapDragHandlers(trackWidth, axis);
+  initRoadmapTooltips();
+}
+
+let _roadmapTooltipsInit = false;
+function initRoadmapTooltips(){
+  if (_roadmapTooltipsInit) return;
+  _roadmapTooltipsInit = true;
+  const tip = document.getElementById('roadmap-name-tooltip');
+  const root = document.getElementById('roadmap-root');
+  if (!tip || !root) return;
+  root.addEventListener('mouseover', (e) => {
+    const el = e.target.closest('.roadmap-row-name');
+    if (!el || !el.title || el.scrollWidth <= el.clientWidth) { tip.style.display = 'none'; return; }
+    tip.textContent = el.title;
+    tip.style.display = 'block';
+  });
+  root.addEventListener('mousemove', (e) => {
+    if (tip.style.display === 'none') return;
+    const x = e.clientX + 14;
+    const y = e.clientY - 10;
+    tip.style.left = (x + tip.offsetWidth > window.innerWidth ? e.clientX - tip.offsetWidth - 8 : x) + 'px';
+    tip.style.top = Math.max(4, Math.min(y, window.innerHeight - tip.offsetHeight - 4)) + 'px';
+  });
+  root.addEventListener('mouseout', (e) => {
+    if (e.target.closest('.roadmap-row-name')) tip.style.display = 'none';
+  });
 }
 
 function attachRoadmapDragHandlers(trackWidth, axis){
@@ -4022,10 +4252,11 @@ Object.assign(window, {
   openEditChantier, saveEditChantier, deleteChantierFromModal,
   openMergeChantierModal, confirmMergeChantier,
   openMoveSprintModal, confirmMoveSprint,
-  onGlobalSearch, renderFrise, renderBilan, handleJiraFile,
+  onGlobalSearch, onBilanSearch, clearBilanLocalSearch, renderFrise, renderBilan, handleJiraFile,
+  renderAmeliorations, openAmeliorationModal, saveAmelioration, deleteAmelioration,
   openBackupsModal, closeBackupsModal, restoreBackup,
   openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock,
-  renderRoadmap, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal,
+  renderRoadmap, initRoadmapTooltips, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal,
   openRoadmapCategoriesModal, addRoadmapCategory, renameRoadmapCategory, recolorRoadmapCategory, deleteRoadmapCategory,
   openImportRoadmapModal, handleRoadmapFile, confirmRoadmapImport,
   renderProgrammation, updateProgItem, deleteProgItem
@@ -4033,5 +4264,6 @@ Object.assign(window, {
 
 initApp().catch(e => { console.error('initApp', e); alert('Erreur connexion Firestore. Vérifie les règles de sécurité.'); });
 </script>
+<div id="roadmap-name-tooltip"></div>
 </body>
 </html>

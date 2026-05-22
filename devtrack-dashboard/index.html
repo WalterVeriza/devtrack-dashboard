@@ -142,6 +142,19 @@
   .amelio-status-badge.en_cours { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
   .amelio-status-badge.fait { background: rgba(110,231,183,0.15); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
   .amelio-status-badge.rejete { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+  /* TICKETS */
+  .tickets-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .tickets-table th { text-align: left; padding: 8px 12px; font-size: 10px; color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; font-weight: 500; letter-spacing: 0.3px; }
+  .tickets-table td { padding: 9px 12px; border-bottom: 1px solid rgba(37,40,54,0.5); vertical-align: middle; }
+  .tickets-table tr:last-child td { border-bottom: none; }
+  .tickets-table tbody tr:hover td { background: rgba(255,255,255,0.02); cursor: pointer; }
+  .ticket-type { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; white-space: nowrap; }
+  .ticket-type.story { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+  .ticket-type.task { background: rgba(110,231,183,0.15); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
+  .ticket-type.bug { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+  .ticket-key { font-size: 10px; color: var(--text2); font-family: 'DM Mono', monospace; white-space: nowrap; }
+  .ticket-dep { display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); margin-right: 3px; }
+  .ticket-dep.resolved { background: rgba(110,231,183,0.08); color: var(--text2); border-color: var(--border); }
   .bilan-table th { text-align: left; padding: 8px 12px; font-size: 10px; color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
   .bilan-table td { padding: 10px 12px; border-bottom: 1px solid rgba(37,40,54,0.5); font-size: 12px; vertical-align: middle; }
   .filter-row { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
@@ -374,6 +387,7 @@
     <div class="tab" onclick="showTab('bilan')">📊 Bilan</div>
     <div class="tab" onclick="openImportModal()" style="color:var(--accent3)">📥 Jira</div>
     <div class="tab" onclick="showTab('ameliorations')">💡 Améliorations</div>
+    <div class="tab" onclick="showTab('tickets')">🎫 Tickets</div>
   </div>
   <div class="actions-wrap">
     <button class="btn btn-ghost btn-sm" id="actions-btn" onclick="toggleActionsMenu(event)" style="white-space:nowrap">⚙ Actions ▾</button>
@@ -556,6 +570,46 @@
   </div>
 </div>
 
+<!-- TAB TICKETS -->
+<div id="tab-tickets" class="main page">
+  <div class="section-header">
+    <div>
+      <div class="section-title">🎫 Tickets</div>
+      <div style="color:var(--text2);font-size:11px;margin-top:2px">User stories, tâches et bugs — avec dépendances</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openNewTicketModal()">+ Nouveau ticket</button>
+  </div>
+  <div class="filter-row">
+    <select id="tickets-epic-filter" onchange="renderTickets()">
+      <option value="all">Tous les epics</option>
+    </select>
+    <select id="tickets-type-filter" onchange="renderTickets()">
+      <option value="all">Tous les types</option>
+      <option value="story">📖 Story</option>
+      <option value="task">✅ Task</option>
+      <option value="bug">🐛 Bug</option>
+    </select>
+    <select id="tickets-dev-filter" onchange="renderTickets()">
+      <option value="all">Tous les devs</option>
+    </select>
+    <select id="tickets-status-filter" onchange="renderTickets()">
+      <option value="all">Tous les statuts</option>
+      <option value="todo">🟦 À faire</option>
+      <option value="in_progress">⚡ En cours</option>
+      <option value="review">👀 En revue</option>
+      <option value="validated">✓ Validé</option>
+      <option value="mep_done">🚀 MEP</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin-left:4px;cursor:pointer">
+      <input type="checkbox" id="tickets-blocked-only" onchange="renderTickets()"> Bloqués seulement
+    </label>
+  </div>
+  <div id="tickets-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto"><table class="tickets-table" id="tickets-table"></table></div>
+  </div>
+</div>
+
 <!-- MODALS -->
 <div class="modal-overlay hidden" id="modal-dev">
   <div class="modal">
@@ -632,6 +686,78 @@
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" onclick="closeModal('modal-edit-task')">Annuler</button>
         <button class="btn btn-primary" onclick="saveEditTask()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-ticket">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-title" id="ticket-modal-title">🎫 Ticket</div>
+    <input type="hidden" id="ticket-modal-task-id">
+    <input type="hidden" id="ticket-modal-sprint-id">
+    <input type="hidden" id="ticket-modal-chantier-id">
+    <div class="form-row">
+      <div style="flex:0 0 140px">
+        <label>Type</label>
+        <select id="ticket-type">
+          <option value="story">📖 Story</option>
+          <option value="task">✅ Task</option>
+          <option value="bug">🐛 Bug</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <label>Titre</label>
+        <input id="ticket-name" placeholder="Titre du ticket">
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="flex:1">
+        <label>Epic (Chantier)</label>
+        <select id="ticket-chantier" onchange="onTicketChantierChange()"></select>
+      </div>
+      <div style="flex:1">
+        <label>Sprint</label>
+        <select id="ticket-sprint"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div style="flex:1">
+        <label>Assigné à</label>
+        <select id="ticket-dev"></select>
+      </div>
+      <div style="flex:1">
+        <label>Statut</label>
+        <select id="ticket-status">
+          <option value="todo">🟦 À faire</option>
+          <option value="in_progress">⚡ En cours</option>
+          <option value="review">👀 En revue</option>
+          <option value="validated">✓ Validé</option>
+          <option value="mep_done">🚀 MEP</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div><label>Date début</label><input type="date" id="ticket-start"></div>
+      <div><label>Date fin</label><input type="date" id="ticket-end"></div>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="ticket-desc" rows="3" placeholder="Description du ticket..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px;font-family:'DM Mono',monospace;font-size:12px;resize:vertical"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Critères d'acceptation</label>
+      <textarea id="ticket-acceptance" rows="3" placeholder="- La feature fonctionne si...&#10;- En tant que... je peux..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:8px;font-family:'DM Mono',monospace;font-size:12px;resize:vertical"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Bloqué par <span style="color:var(--text2);font-weight:400">(clés Jira ou IDs, séparés par virgules)</span></label>
+      <input id="ticket-blocked-by" placeholder="Ex: TEST-10, TEST-21">
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" id="ticket-delete-btn" onclick="deleteTicketFromModal()" style="display:none;color:var(--danger)">🗑 Supprimer</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeModal('modal-ticket')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveTicket()">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -2767,19 +2893,270 @@ function deleteAmelioration(){
   renderAmeliorations();
 }
 
+// ===== TICKETS =====
+const TICKET_TYPE_LABELS = { story: '📖 Story', task: '✅ Task', bug: '🐛 Bug' };
+const TASK_STATUS_LABELS_T = {
+  todo: '🟦 À faire', in_progress: '⚡ En cours', review: '👀 En revue',
+  validated: '✓ Validé', mep_done: '🚀 MEP', cancelled: '❌ Annulé'
+};
+
+function getAllTickets(){
+  const tickets = [];
+  state.chantiers.forEach(c => {
+    c.sprints.forEach(s => {
+      (s.tasks || []).forEach(t => {
+        if (!t.archived) tickets.push({ task: t, sprint: s, chantier: c });
+      });
+    });
+  });
+  return tickets;
+}
+
+function isTaskBlocked(task, allTickets){
+  if (!task.blockedBy || !task.blockedBy.length) return false;
+  return task.blockedBy.some(dep => {
+    const depStr = String(dep).trim();
+    const found = allTickets.find(x =>
+      (x.task.jiraKey && x.task.jiraKey === depStr) || String(x.task.id) === depStr
+    );
+    if (!found) return false;
+    const st = taskStatus(found.task);
+    return st !== 'mep_done' && st !== 'cancelled';
+  });
+}
+
+function renderTickets(){
+  const all = getAllTickets();
+  const epicSel = document.getElementById('tickets-epic-filter');
+  if (epicSel){
+    const cur = epicSel.value;
+    epicSel.innerHTML = '<option value="all">Tous les epics</option>' +
+      state.chantiers.map(c => `<option value="${c.id}"${String(c.id)===cur?' selected':''}>${c.name}</option>`).join('');
+  }
+  const devSel = document.getElementById('tickets-dev-filter');
+  if (devSel){
+    const cur = devSel.value;
+    devSel.innerHTML = '<option value="all">Tous les devs</option>' +
+      state.devs.map(d => `<option value="${d.id}"${String(d.id)===cur?' selected':''}>${d.name}</option>`).join('');
+  }
+
+  const epicFilter = epicSel?.value || 'all';
+  const typeFilter = document.getElementById('tickets-type-filter')?.value || 'all';
+  const devFilter = devSel?.value || 'all';
+  const statusFilter = document.getElementById('tickets-status-filter')?.value || 'all';
+  const blockedOnly = document.getElementById('tickets-blocked-only')?.checked || false;
+
+  const filtered = all.filter(x => {
+    if (epicFilter !== 'all' && String(x.chantier.id) !== epicFilter) return false;
+    if (typeFilter !== 'all' && (x.task.type || 'task') !== typeFilter) return false;
+    if (devFilter !== 'all' && String(x.task.dev) !== devFilter) return false;
+    if (statusFilter !== 'all' && taskStatus(x.task) !== statusFilter) return false;
+    if (blockedOnly && !isTaskBlocked(x.task, all)) return false;
+    return true;
+  });
+
+  const statsEl = document.getElementById('tickets-stats');
+  if (statsEl){
+    const total = all.length;
+    const blocked = all.filter(x => isTaskBlocked(x.task, all)).length;
+    const stories = all.filter(x => (x.task.type||'task') === 'story').length;
+    const bugs = all.filter(x => (x.task.type||'task') === 'bug').length;
+    statsEl.innerHTML = `
+      <div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px">
+        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif">${total}</div>
+        <div style="font-size:10px;color:var(--text2)">Tickets</div>
+      </div>
+      <div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px">
+        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:#60a5fa">${stories}</div>
+        <div style="font-size:10px;color:var(--text2)">Stories</div>
+      </div>
+      <div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px">
+        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:#f87171">${bugs}</div>
+        <div style="font-size:10px;color:var(--text2)">Bugs</div>
+      </div>
+      ${blocked ? `<div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px;border-color:rgba(248,113,113,0.3)">
+        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:#f87171">${blocked}</div>
+        <div style="font-size:10px;color:var(--danger)">Bloqués</div>
+      </div>` : ''}
+    `;
+  }
+
+  const tbody = document.getElementById('tickets-table');
+  if (!tbody) return;
+  if (!filtered.length){
+    tbody.innerHTML = '<thead><tr><th colspan="8" style="text-align:center;padding:24px;color:var(--text2)">Aucun ticket</th></tr></thead>';
+    return;
+  }
+
+  const rows = filtered.map(x => {
+    const t = x.task;
+    const type = t.type || 'task';
+    const dev = t.dev != null ? getDevById(t.dev) : null;
+    const st = taskStatus(t);
+    const stLabel = TASK_STATUS_LABELS_T[st] || st;
+    const stClass = st === 'mep_done' ? 'fait' : st === 'in_progress' ? 'en_cours' : st === 'validated' ? 'fait' : 'ouvert';
+    const deps = (t.blockedBy || []).map(dep => {
+      const depStr = String(dep).trim();
+      const found = all.find(x2 => (x2.task.jiraKey && x2.task.jiraKey === depStr) || String(x2.task.id) === depStr);
+      const res = found && (taskStatus(found.task) === 'mep_done' || taskStatus(found.task) === 'cancelled');
+      return `<span class="ticket-dep${res?' resolved':''}" title="${found?found.task.name:depStr}">${depStr}</span>`;
+    }).join('');
+    const devHtml = dev
+      ? `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:${dev.color||'#6ee7b7'};display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0d0f14">${(dev.name||'?')[0].toUpperCase()}</span>${dev.name}</span>`
+      : '<span style="color:var(--text2)">—</span>';
+    return `<tr onclick="openTicketModal(${x.chantier.id},${x.sprint.id},${t.id})">
+      <td><span class="ticket-type ${type}">${TICKET_TYPE_LABELS[type]||type}</span></td>
+      <td class="ticket-key">${t.jiraKey||'#'+t.id}</td>
+      <td style="max-width:260px">${t.name}</td>
+      <td style="color:var(--text2)">${x.chantier.name}</td>
+      <td style="color:var(--text2);white-space:nowrap">${x.sprint.name}</td>
+      <td>${devHtml}</td>
+      <td><span class="amelio-status-badge ${stClass}">${stLabel}</span></td>
+      <td>${deps}</td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = `<thead><tr>
+    <th>Type</th><th>Clé</th><th>Titre</th><th>Epic</th><th>Sprint</th><th>Dev</th><th>Statut</th><th>Dépendances</th>
+  </tr></thead><tbody>${rows}</tbody>`;
+}
+
+let _ticketModal = { chantierId: null, sprintId: null, taskId: null, isNew: false };
+
+function openTicketModal(chantierId, sprintId, taskId){
+  const chantier = state.chantiers.find(c => c.id == chantierId);
+  if (!chantier) return;
+  const sprint = chantier.sprints.find(s => s.id == sprintId);
+  if (!sprint) return;
+  const task = (sprint.tasks||[]).find(t => t.id == taskId);
+  if (!task) return;
+  _ticketModal = { chantierId, sprintId, taskId, isNew: false };
+  document.getElementById('ticket-modal-title').textContent = '✏ ' + (task.name||'Ticket');
+  document.getElementById('ticket-modal-task-id').value = taskId;
+  document.getElementById('ticket-modal-sprint-id').value = sprintId;
+  document.getElementById('ticket-modal-chantier-id').value = chantierId;
+  document.getElementById('ticket-type').value = task.type || 'task';
+  document.getElementById('ticket-name').value = task.name || '';
+  document.getElementById('ticket-start').value = task.start || '';
+  document.getElementById('ticket-end').value = task.end || '';
+  document.getElementById('ticket-desc').value = task.description || '';
+  document.getElementById('ticket-acceptance').value = task.acceptanceCriteria || '';
+  document.getElementById('ticket-blocked-by').value = (task.blockedBy||[]).join(', ');
+  document.getElementById('ticket-status').value = task.status || 'todo';
+  document.getElementById('ticket-delete-btn').style.display = 'inline-flex';
+  const chSel = document.getElementById('ticket-chantier');
+  chSel.innerHTML = state.chantiers.map(c => `<option value="${c.id}"${c.id==chantierId?' selected':''}>${c.name}</option>`).join('');
+  _ticketRefreshSprintSelect(chantierId, sprintId);
+  const devSel = document.getElementById('ticket-dev');
+  devSel.innerHTML = '<option value="">— Non assigné —</option>' +
+    state.devs.map(d => `<option value="${d.id}"${d.id==task.dev?' selected':''}>${d.name}</option>`).join('');
+  openModal('modal-ticket');
+}
+
+function openNewTicketModal(){
+  _ticketModal = { chantierId: null, sprintId: null, taskId: null, isNew: true };
+  document.getElementById('ticket-modal-title').textContent = '+ Nouveau ticket';
+  document.getElementById('ticket-modal-task-id').value = '';
+  document.getElementById('ticket-type').value = 'story';
+  document.getElementById('ticket-name').value = '';
+  document.getElementById('ticket-start').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ticket-end').value = '';
+  document.getElementById('ticket-desc').value = '';
+  document.getElementById('ticket-acceptance').value = '';
+  document.getElementById('ticket-blocked-by').value = '';
+  document.getElementById('ticket-status').value = 'todo';
+  document.getElementById('ticket-delete-btn').style.display = 'none';
+  const chSel = document.getElementById('ticket-chantier');
+  chSel.innerHTML = '<option value="">— Choisir un epic —</option>' +
+    state.chantiers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('ticket-sprint').innerHTML = '<option value="">— Choisir un sprint —</option>';
+  const devSel = document.getElementById('ticket-dev');
+  devSel.innerHTML = '<option value="">— Non assigné —</option>' +
+    state.devs.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+  openModal('modal-ticket');
+}
+
+function onTicketChantierChange(){
+  _ticketRefreshSprintSelect(document.getElementById('ticket-chantier').value, null);
+}
+
+function _ticketRefreshSprintSelect(chantierId, selectedSprintId){
+  const chantier = state.chantiers.find(c => c.id == chantierId);
+  const sprintSel = document.getElementById('ticket-sprint');
+  if (!chantier){ sprintSel.innerHTML = '<option value="">— Choisir un sprint —</option>'; return; }
+  sprintSel.innerHTML = chantier.sprints.map(s =>
+    `<option value="${s.id}"${s.id==selectedSprintId?' selected':''}>${s.name}</option>`
+  ).join('');
+}
+
+function saveTicket(){
+  const name = (document.getElementById('ticket-name').value||'').trim();
+  if (!name){ showToast('Titre requis'); return; }
+  const chantierId = parseInt(document.getElementById('ticket-chantier').value);
+  const sprintId = parseInt(document.getElementById('ticket-sprint').value);
+  if (!chantierId || !sprintId){ showToast('Epic et Sprint requis'); return; }
+  const chantier = state.chantiers.find(c => c.id === chantierId);
+  const sprint = chantier?.sprints.find(s => s.id === sprintId);
+  if (!sprint){ showToast('Sprint introuvable'); return; }
+  const type = document.getElementById('ticket-type').value;
+  const devVal = document.getElementById('ticket-dev').value;
+  const status = document.getElementById('ticket-status').value;
+  const start = document.getElementById('ticket-start').value;
+  const end = document.getElementById('ticket-end').value;
+  const description = document.getElementById('ticket-desc').value.trim();
+  const acceptanceCriteria = document.getElementById('ticket-acceptance').value.trim();
+  const blockedByRaw = document.getElementById('ticket-blocked-by').value.trim();
+  const blockedBy = blockedByRaw ? blockedByRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (_ticketModal.isNew){
+    sprint.tasks = sprint.tasks || [];
+    sprint.tasks.push({
+      id: state.nextId.task++, name, type,
+      dev: devVal ? parseInt(devVal) : null,
+      status, start, end, mepDate: '',
+      description, acceptanceCriteria, blockedBy
+    });
+  } else {
+    const oldChantier = state.chantiers.find(c => c.id == _ticketModal.chantierId);
+    const oldSprint = oldChantier?.sprints.find(s => s.id == _ticketModal.sprintId);
+    const task = (oldSprint?.tasks||[]).find(t => t.id == _ticketModal.taskId);
+    if (!task){ showToast('Ticket introuvable'); return; }
+    if (chantierId != _ticketModal.chantierId || sprintId != _ticketModal.sprintId){
+      oldSprint.tasks = (oldSprint.tasks||[]).filter(t => t.id != _ticketModal.taskId);
+      sprint.tasks = sprint.tasks || [];
+      sprint.tasks.push({ ...task, name, type, dev: devVal ? parseInt(devVal) : null, status, start, end, description, acceptanceCriteria, blockedBy });
+    } else {
+      Object.assign(task, { name, type, dev: devVal ? parseInt(devVal) : null, status, start, end, description, acceptanceCriteria, blockedBy });
+    }
+  }
+  closeModal('modal-ticket');
+  saveState();
+  renderTickets();
+}
+
+function deleteTicketFromModal(){
+  if (_ticketModal.isNew || !_ticketModal.taskId) return;
+  if (!confirm('Supprimer ce ticket ?')) return;
+  const chantier = state.chantiers.find(c => c.id == _ticketModal.chantierId);
+  const sprint = chantier?.sprints.find(s => s.id == _ticketModal.sprintId);
+  if (sprint) sprint.tasks = (sprint.tasks||[]).filter(t => t.id != _ticketModal.taskId);
+  closeModal('modal-ticket');
+  saveState();
+  renderTickets();
+}
+
 // ===== TABS =====
 function showTab(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
   document.querySelectorAll('.tab').forEach(t=>{
-    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='programmation'&&t.textContent.includes('Programmation'))||(name==='bilan'&&t.textContent.includes('Bilan'))||(name==='ameliorations'&&t.textContent.includes('Améliorations')))t.classList.add('active');
+    if((name==='roadmap'&&t.textContent.includes('Roadmap'))||(name==='programmation'&&t.textContent.includes('Programmation'))||(name==='bilan'&&t.textContent.includes('Bilan'))||(name==='ameliorations'&&t.textContent.includes('Améliorations'))||(name==='tickets'&&t.textContent.includes('Tickets')))t.classList.add('active');
   });
   if(name==='frise')renderFrise();
   if(name==='bilan')renderBilan();
   if(name==='roadmap')renderRoadmap();
   if(name==='programmation')renderProgrammation();
   if(name==='ameliorations')renderAmeliorations();
+  if(name==='tickets')renderTickets();
 }
 
 function render(){
@@ -3480,12 +3857,14 @@ function confirmJiraImport(){
     sprint.tasks.push({
       id: state.nextId.task++,
       name: iss.name,
+      type: 'story',
       dev: dev ? dev.id : null,
       start: iss.start,
       end: iss.end,
       status: iss.status,
       mepDate: '',
-      jiraKey: iss.key
+      jiraKey: iss.key,
+      blockedBy: []
     });
     created++;
   });
@@ -4254,6 +4633,7 @@ Object.assign(window, {
   openMoveSprintModal, confirmMoveSprint,
   onGlobalSearch, onBilanSearch, clearBilanLocalSearch, renderFrise, renderBilan, handleJiraFile,
   renderAmeliorations, openAmeliorationModal, saveAmelioration, deleteAmelioration,
+  renderTickets, openTicketModal, openNewTicketModal, saveTicket, deleteTicketFromModal, onTicketChantierChange,
   openBackupsModal, closeBackupsModal, restoreBackup,
   openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock,
   renderRoadmap, initRoadmapTooltips, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal,

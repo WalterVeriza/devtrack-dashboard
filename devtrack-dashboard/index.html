@@ -592,8 +592,8 @@
     </div>
     <div style="display:flex;gap:8px;align-items:center">
       <div class="view-toggle">
-        <button class="view-toggle-btn active" id="view-btn-list" onclick="setTicketsView('list')" title="Vue liste">☰ Liste</button>
-        <button class="view-toggle-btn" id="view-btn-kanban" onclick="setTicketsView('kanban')" title="Vue Kanban">⊞ Kanban</button>
+        <button class="view-toggle-btn" id="view-btn-list" onclick="setTicketsView('list')" title="Vue liste">☰ Liste</button>
+        <button class="view-toggle-btn active" id="view-btn-kanban" onclick="setTicketsView('kanban')" title="Vue Kanban">⊞ Kanban</button>
       </div>
       <button class="btn btn-primary btn-sm" onclick="openNewTicketModal()">+ Nouveau ticket</button>
     </div>
@@ -624,10 +624,10 @@
     </label>
   </div>
   <div id="tickets-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
-  <div id="tickets-list-view" class="card" style="padding:0;overflow:hidden">
+  <div id="tickets-list-view" class="card" style="padding:0;overflow:hidden;display:none">
     <div style="overflow-x:auto"><table class="tickets-table" id="tickets-table"></table></div>
   </div>
-  <div id="tickets-kanban-view" style="display:none"></div>
+  <div id="tickets-kanban-view"></div>
 </div>
 
 <!-- MODALS -->
@@ -2914,7 +2914,7 @@ function deleteAmelioration(){
 }
 
 // ===== TICKETS =====
-let _ticketsView = 'list';
+let _ticketsView = 'kanban';
 function setTicketsView(v){
   _ticketsView = v;
   document.getElementById('view-btn-list')?.classList.toggle('active', v==='list');

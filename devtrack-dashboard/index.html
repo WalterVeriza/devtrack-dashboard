@@ -579,20 +579,20 @@
     </div>
     <button class="btn btn-primary btn-sm" onclick="openNewTicketModal()">+ Nouveau ticket</button>
   </div>
-  <div class="filter-row">
-    <select id="tickets-epic-filter" onchange="renderTickets()">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+    <select id="tickets-epic-filter" onchange="renderTickets()" style="width:auto;min-width:130px">
       <option value="all">Tous les epics</option>
     </select>
-    <select id="tickets-type-filter" onchange="renderTickets()">
+    <select id="tickets-type-filter" onchange="renderTickets()" style="width:auto;min-width:110px">
       <option value="all">Tous les types</option>
       <option value="story">📖 Story</option>
       <option value="task">✅ Task</option>
       <option value="bug">🐛 Bug</option>
     </select>
-    <select id="tickets-dev-filter" onchange="renderTickets()">
+    <select id="tickets-dev-filter" onchange="renderTickets()" style="width:auto;min-width:120px">
       <option value="all">Tous les devs</option>
     </select>
-    <select id="tickets-status-filter" onchange="renderTickets()">
+    <select id="tickets-status-filter" onchange="renderTickets()" style="width:auto;min-width:120px">
       <option value="all">Tous les statuts</option>
       <option value="todo">🟦 À faire</option>
       <option value="in_progress">⚡ En cours</option>
@@ -600,8 +600,8 @@
       <option value="validated">✓ Validé</option>
       <option value="mep_done">🚀 MEP</option>
     </select>
-    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin-left:4px;cursor:pointer">
-      <input type="checkbox" id="tickets-blocked-only" onchange="renderTickets()"> Bloqués seulement
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;margin-left:4px">
+      <input type="checkbox" id="tickets-blocked-only" onchange="renderTickets()"> 🔴 Bloqués seulement
     </label>
   </div>
   <div id="tickets-stats" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap"></div>
@@ -3012,7 +3012,7 @@ function renderTickets(){
       <td style="color:var(--text2);white-space:nowrap">${x.sprint.name}</td>
       <td>${devHtml}</td>
       <td><span class="amelio-status-badge ${stClass}">${stLabel}</span></td>
-      <td>${deps}</td>
+      <td>${deps || '<span style="color:var(--text2);opacity:0.4">—</span>'}</td>
     </tr>`;
   }).join('');
   tbody.innerHTML = `<thead><tr>

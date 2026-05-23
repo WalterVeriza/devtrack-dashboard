@@ -147,7 +147,8 @@
   .tickets-table th { text-align: left; padding: 8px 12px; font-size: 10px; color: var(--text2); border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; font-weight: 500; letter-spacing: 0.3px; }
   .tickets-table td { padding: 9px 12px; border-bottom: 1px solid rgba(37,40,54,0.5); vertical-align: middle; }
   .tickets-table tr:last-child td { border-bottom: none; }
-  .tickets-table tbody tr:hover td { background: rgba(255,255,255,0.02); cursor: pointer; }
+  .tickets-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .tickets-table tbody tr:hover td { background: rgba(110,231,183,0.05) !important; cursor: pointer; }
   .ticket-type { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 500; white-space: nowrap; }
   .ticket-type.story { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
   .ticket-type.task { background: rgba(110,231,183,0.15); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.3); }
@@ -2961,22 +2962,50 @@ function renderTickets(){
     const blocked = all.filter(x => isTaskBlocked(x.task, all)).length;
     const stories = all.filter(x => (x.task.type||'task') === 'story').length;
     const bugs = all.filter(x => (x.task.type||'task') === 'bug').length;
+    const tasks = all.filter(x => (x.task.type||'task') === 'task').length;
+    const done = all.filter(x => taskStatus(x.task) === 'mep_done').length;
     statsEl.innerHTML = `
-      <div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px">
-        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif">${total}</div>
-        <div style="font-size:10px;color:var(--text2)">Tickets</div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:12px;min-width:120px">
+        <div style="font-size:22px">🎫</div>
+        <div>
+          <div style="font-size:22px;font-weight:700;font-family:'Syne',sans-serif;line-height:1">${total}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Total tickets</div>
+        </div>
       </div>
-      <div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px">
-        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:#60a5fa">${stories}</div>
-        <div style="font-size:10px;color:var(--text2)">Stories</div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:12px;min-width:120px;border-color:rgba(96,165,250,0.3)">
+        <div style="font-size:22px">📖</div>
+        <div>
+          <div style="font-size:22px;font-weight:700;font-family:'Syne',sans-serif;color:#60a5fa;line-height:1">${stories}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Stories</div>
+        </div>
       </div>
-      <div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px">
-        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:#f87171">${bugs}</div>
-        <div style="font-size:10px;color:var(--text2)">Bugs</div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:12px;min-width:120px;border-color:rgba(110,231,183,0.3)">
+        <div style="font-size:22px">✅</div>
+        <div>
+          <div style="font-size:22px;font-weight:700;font-family:'Syne',sans-serif;color:#6ee7b7;line-height:1">${tasks}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Tasks</div>
+        </div>
       </div>
-      ${blocked ? `<div class="card" style="padding:10px 16px;display:flex;flex-direction:column;align-items:center;min-width:80px;border-color:rgba(248,113,113,0.3)">
-        <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:#f87171">${blocked}</div>
-        <div style="font-size:10px;color:var(--danger)">Bloqués</div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:12px;min-width:120px;border-color:rgba(248,113,113,0.3)">
+        <div style="font-size:22px">🐛</div>
+        <div>
+          <div style="font-size:22px;font-weight:700;font-family:'Syne',sans-serif;color:#f87171;line-height:1">${bugs}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">Bugs</div>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:12px;min-width:120px;border-color:rgba(110,231,183,0.2)">
+        <div style="font-size:22px">🚀</div>
+        <div>
+          <div style="font-size:22px;font-weight:700;font-family:'Syne',sans-serif;color:#6ee7b7;line-height:1">${done}</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">En MEP</div>
+        </div>
+      </div>
+      ${blocked ? `<div class="card" style="padding:12px 20px;display:flex;align-items:center;gap:12px;min-width:120px;border-color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.05)">
+        <div style="font-size:22px">🔴</div>
+        <div>
+          <div style="font-size:22px;font-weight:700;font-family:'Syne',sans-serif;color:#f87171;line-height:1">${blocked}</div>
+          <div style="font-size:10px;color:var(--danger);margin-top:2px">Bloqués</div>
+        </div>
       </div>` : ''}
     `;
   }

@@ -3842,11 +3842,14 @@ function analyzeJiraCsv(text){
 
       // Mapping Jira "État" → status dashboard (priorité au statut précis, fallback sur catégorie)
       const mappedStatus = mapJiraStatus(stateName, statusCat);
+      const description = getCol(row, idx, 'Description').trim();
+      const acceptanceCriteria = getCol(row, idx, 'Champs personnalisés (Acceptance Criteria)').trim();
       issues.push({
         key, name: summary, assignee,
         start: finalStart, end: finalEnd,
         status: mappedStatus,
-        parentKey, sprintName
+        parentKey, sprintName,
+        description, acceptanceCriteria
       });
     }
   }
@@ -3948,6 +3951,8 @@ function confirmJiraImport(){
       if (iss.status === 'todo' || iss.status === 'in_progress' || iss.status === 'review'){
         t.mepDate = '';
       }
+      if (iss.description) t.description = iss.description;
+      if (iss.acceptanceCriteria) t.acceptanceCriteria = iss.acceptanceCriteria;
       updated++;
       return;
     }
@@ -3966,7 +3971,9 @@ function confirmJiraImport(){
       status: iss.status,
       mepDate: '',
       jiraKey: iss.key,
-      blockedBy: []
+      blockedBy: [],
+      description: iss.description || '',
+      acceptanceCriteria: iss.acceptanceCriteria || ''
     });
     created++;
   });

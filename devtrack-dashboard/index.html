@@ -321,6 +321,8 @@
   .roadmap-bar-handle.right { right: 0; border-radius: 0 4px 4px 0; }
   .roadmap-bar-label { pointer-events: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 1px rgba(0,0,0,0.4); }
   .roadmap-bar.status-termine { opacity: 0.55; }
+  .roadmap-mes-marker { position: absolute; top: 4px; bottom: 4px; width: 2px; background: #fff; opacity: 0.9; pointer-events: none; z-index: 3; border-radius: 1px; }
+  .roadmap-mes-pin { position: absolute; top: 0; transform: translateX(-50%); font-size: 9px; font-weight: 700; color: #fbbf24; background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.55); border-radius: 3px; padding: 0 4px; line-height: 16px; pointer-events: none; z-index: 4; white-space: nowrap; letter-spacing: 0.3px; }
   .roadmap-cat-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 4px; }
   .roadmap-cat-row input[type="text"] { flex: 1; min-width: 0; padding: 4px 6px; font-size: 12px; }
   .roadmap-cat-row input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border); }
@@ -396,11 +398,6 @@
   </div>
   <div class="tabs">
     <div class="tab active" onclick="showTab('roadmap')">🗺 Roadmap</div>
-    <div class="tab" onclick="showTab('programmation')">📝 Programmation</div>
-    <div class="tab" onclick="showTab('bilan')">📊 Bilan</div>
-    <div class="tab" onclick="openImportModal()" style="color:var(--accent3)">📥 Jira</div>
-    <div class="tab" onclick="showTab('ameliorations')">💡 Améliorations</div>
-    <div class="tab" onclick="showTab('tickets')">🎫 Tickets</div>
   </div>
   <div class="actions-wrap">
     <button class="btn btn-ghost btn-sm" id="actions-btn" onclick="toggleActionsMenu(event)" style="white-space:nowrap">⚙ Actions ▾</button>
@@ -817,9 +814,10 @@
       <div><label>Catégorie</label><select id="roadmap-item-category"></select></div>
       <div><label>👤 Dev responsable</label><select id="roadmap-item-dev"></select></div>
     </div>
-    <div class="form-row">
-      <div><label>Date début</label><input type="date" id="roadmap-item-start"></div>
-      <div><label>🚀 Date MEP</label><input type="date" id="roadmap-item-end"></div>
+    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
+      <div><label>📅 Date début</label><input type="date" id="roadmap-item-start"></div>
+      <div><label>🧪 MES (Staging)</label><input type="date" id="roadmap-item-mes" placeholder="optionnel"></div>
+      <div><label>🚀 MEP (Production)</label><input type="date" id="roadmap-item-end"></div>
     </div>
     <div class="form-row">
       <div><label>Statut</label>
@@ -4108,6 +4106,18 @@ function renderRoadmap(){
         ? `<span class="roadmap-bar-avatar" title="${escapeHtml(devName)}">${avatarInitials(devName)}</span>`
         : '';
       const isLate = it.status !== 'termine' && it.end && it.end < TODAY.toISOString().slice(0,10);
+      // MES (Mise en Staging) — marqueur visuel sur la barre
+      const mesPx = (it.mesDate && it.mesDate >= it.start && it.mesDate <= it.end)
+        ? roadmapDateToPx(it.mesDate, axis, trackWidth) : null;
+      const mesOffsetPct = mesPx !== null ? Math.round((mesPx - startPx) / w * 100) : null;
+      const barBg = mesOffsetPct !== null
+        ? `linear-gradient(to right, ${cat.color} 0%, ${cat.color} ${mesOffsetPct}%, ${cat.color}55 ${mesOffsetPct}%, ${cat.color}55 100%)`
+        : cat.color;
+      const mesMarkerHtml = mesPx !== null ? `
+        <div class="roadmap-mes-marker" style="left:${mesPx - startPx}px"></div>` : '';
+      // Marqueur MES positionné dans la track (pas dans la barre, pour qu'il dépasse en haut)
+      const mesTrackHtml = mesPx !== null ? `
+        <div class="roadmap-mes-pin" style="left:${mesPx}px" title="MES le ${it.mesDate}">MES</div>` : '';
       return `<div class="roadmap-row" data-item-id="${it.id}">
         <div class="roadmap-row-label">
           <span class="roadmap-row-num">${idx+1}</span>
@@ -4116,15 +4126,18 @@ function renderRoadmap(){
           <span class="roadmap-row-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}${isLate?' <span class="delay-chip" style="margin-left:4px">⚠ MEP dépassée</span>':''}</span>
           <span class="roadmap-row-cat" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}55">${escapeHtml(cat.name)}</span>
           <span class="roadmap-row-status">${status.icon} ${status.label}</span>
+          ${mesPx !== null ? `<span class="badge badge-yellow" style="font-size:9px;padding:1px 5px">🧪 MES ${it.mesDate}</span>` : ''}
         </div>
         <div class="roadmap-row-track" data-item-id="${it.id}" style="--tick-w:${perTickPx}px">
           <div class="roadmap-today" style="left:${todayPx}px"></div>
+          ${mesTrackHtml}
           <div class="roadmap-bar status-${it.status||'a_planifier'}" data-item-id="${it.id}"
-               style="left:${startPx}px;width:${w}px;background:${cat.color};"
+               style="left:${startPx}px;width:${w}px;background:${barBg};"
                onclick="openRoadmapItemModal('${it.id}')">
             <div class="roadmap-bar-handle left" data-handle="left"></div>
             ${barDevAvatar}
             <span class="roadmap-bar-label">${escapeHtml(it.name)}</span>
+            ${mesMarkerHtml}
             <div class="roadmap-bar-handle right" data-handle="right"></div>
           </div>
         </div>
@@ -4298,6 +4311,7 @@ function openRoadmapItemModal(itemId){
     document.getElementById('roadmap-item-category').value = it.categoryId || roadmap.categories[0]?.id || '';
     fillRoadmapDevSelect(devSelect, it.devName || '');
     document.getElementById('roadmap-item-start').value = it.start || '';
+    document.getElementById('roadmap-item-mes').value = it.mesDate || '';
     document.getElementById('roadmap-item-end').value = it.end || '';
     document.getElementById('roadmap-item-status').value = it.status || 'a_planifier';
     document.getElementById('roadmap-item-priority').value = it.priority || 'P2';
@@ -4309,6 +4323,7 @@ function openRoadmapItemModal(itemId){
     const today = TODAY.toISOString().slice(0,10);
     const in60 = new Date(TODAY.getTime() + 60*86400000).toISOString().slice(0,10);
     document.getElementById('roadmap-item-start').value = today;
+    document.getElementById('roadmap-item-mes').value = '';
     document.getElementById('roadmap-item-end').value = in60;
     document.getElementById('roadmap-item-status').value = 'a_planifier';
     document.getElementById('roadmap-item-priority').value = 'P2';
@@ -4324,6 +4339,7 @@ function saveRoadmapItem(){
   const devName = document.getElementById('roadmap-item-dev').value || '';
   const devColor = devName ? getDevColorByName(devName) : '';
   const start = document.getElementById('roadmap-item-start').value;
+  const mesDate = document.getElementById('roadmap-item-mes').value || '';
   const end = document.getElementById('roadmap-item-end').value;
   const status = document.getElementById('roadmap-item-status').value;
   const priority = document.getElementById('roadmap-item-priority').value;
@@ -4333,10 +4349,10 @@ function saveRoadmapItem(){
   if (end < start){ err.textContent = 'La date MEP doit être après la date de début.'; err.style.display='block'; return; }
   if (id){
     const it = roadmap.items.find(i => i.id === id);
-    if (it){ it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor; it.start = start; it.end = end; it.status = status; it.priority = priority; }
+    if (it){ it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor; it.start = start; it.mesDate = mesDate; it.end = end; it.status = status; it.priority = priority; }
   } else {
     const newId = 'rm_' + Date.now() + '_' + (roadmap.nextId++);
-    roadmap.items.push({ id:newId, name, categoryId, devName, devColor, start, end, status, priority });
+    roadmap.items.push({ id:newId, name, categoryId, devName, devColor, start, mesDate, end, status, priority });
   }
   closeModal('modal-roadmap-item');
   saveRoadmap();

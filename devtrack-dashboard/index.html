@@ -4367,6 +4367,8 @@ function saveRoadmapItem(){
   if (!name){ err.textContent = 'Le nom est requis.'; err.style.display='block'; return; }
   if (!start || !end){ err.textContent = 'Dates requises.'; err.style.display='block'; return; }
   if (end < start){ err.textContent = 'La date MEP doit être après la date de début.'; err.style.display='block'; return; }
+  if (mesDate && mesDate > end){ err.textContent = 'La MES (staging) ne peut pas être postérieure à la MEP (production).'; err.style.display='block'; return; }
+  if (mesDate && mesDate < start){ err.textContent = 'La MES (staging) ne peut pas être antérieure à la date de début.'; err.style.display='block'; return; }
   if (id){
     const it = roadmap.items.find(i => i.id === id);
     if (it){ it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor; it.start = start; it.mesDate = mesDate; it.end = end; it.status = status; it.priority = priority; }

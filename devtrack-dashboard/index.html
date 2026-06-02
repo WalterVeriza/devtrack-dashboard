@@ -490,6 +490,8 @@
           <option value="a_faire">🟦 À faire</option>
           <option value="demarrage">🚦 Démarrage</option>
           <option value="en_cours">⚡ En cours</option>
+          <option value="ready_test">🧪 Ready for Test</option>
+          <option value="ready_prod">🚀 Ready for Production</option>
           <option value="termine">✅ Terminé</option>
           <option value="late">⚠ En retard</option>
         </select>
@@ -841,6 +843,8 @@
           <option value="a_faire">🟦 À faire</option>
           <option value="demarrage">🚦 Démarrage</option>
           <option value="en_cours">⚡ En cours</option>
+          <option value="ready_test">🧪 Ready for Test</option>
+          <option value="ready_prod">🚀 Ready for Production</option>
           <option value="termine">✅ Terminé</option>
         </select>
       </div>
@@ -1087,13 +1091,15 @@ const ROADMAP_DEFAULT_CATEGORIES = [
   { id: 'cat_crm',       name: 'CRM',       color: '#f472b6' }
 ];
 const ROADMAP_STATUSES = {
-  a_cadrer:    { label: 'À cadrer',    icon: '📋' },
-  cadrage:     { label: 'Cadrage',     icon: '🛠' },
-  a_planifier: { label: 'À planifier', icon: '📅' },
-  a_faire:     { label: 'À faire',     icon: '🟦' },
-  demarrage:   { label: 'Démarrage',   icon: '🚦' },
-  en_cours:    { label: 'En cours',    icon: '⚡' },
-  termine:     { label: 'Terminé',     icon: '✅' }
+  a_cadrer:    { label: 'À cadrer',           icon: '📋' },
+  cadrage:     { label: 'Cadrage',            icon: '🛠' },
+  a_planifier: { label: 'À planifier',        icon: '📅' },
+  a_faire:     { label: 'À faire',            icon: '🟦' },
+  demarrage:   { label: 'Démarrage',          icon: '🚦' },
+  en_cours:    { label: 'En cours',           icon: '⚡' },
+  ready_test:  { label: 'Ready for Test',     icon: '🧪' },
+  ready_prod:  { label: 'Ready for Production', icon: '🚀' },
+  termine:     { label: 'Terminé',            icon: '✅' }
 };
 const ROADMAP_PRIORITIES = {
   P1: { label: 'P1 Haute',   icon: '🔴' },
@@ -4626,6 +4632,8 @@ function mapRoadmapStatus(s){
   if (t.includes('planifier')) return 'a_planifier';
   if (t.includes('faire')) return 'a_faire';
   if (t.includes('demarr') || t.includes('lancement')) return 'demarrage';
+  if (t.includes('ready for test') || t.includes('ready test') || t.includes('a tester') || t.includes('to test')) return 'ready_test';
+  if (t.includes('ready for prod') || t.includes('ready prod') || t.includes('to deploy') || t.includes('to release')) return 'ready_prod';
   if (t.includes('cours')) return 'en_cours';
   if (t.includes('termin') || t.includes('livre') || t.includes('fait')) return 'termine';
   return 'a_planifier';

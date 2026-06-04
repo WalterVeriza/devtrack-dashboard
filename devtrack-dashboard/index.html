@@ -938,6 +938,22 @@
   </div>
 </div>
 
+<!-- MODAL : édition des données déploiements (MES/MEP par projet) -->
+<div class="modal-overlay hidden" id="modal-deploiements">
+  <div class="modal" style="max-width:820px">
+    <div class="modal-title">📥 Mettre à jour les données de déploiement</div>
+    <div style="color:var(--text2);font-size:11px;margin-bottom:12px">
+      Format : un compteur par ligne — <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">nombre année-semaine</code> (ex : <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">15 2026-21</code>). Lignes vides ignorées.
+    </div>
+    <div id="depl-import-fields"></div>
+    <div class="error-msg" id="depl-import-error" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-deploiements')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveDeploiementsFromModal()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay hidden" id="modal-backups">
   <div class="modal">
     <div class="modal-title">⏮ Restaurer un backup</div>
@@ -5050,20 +5066,63 @@ function renderDeploiements(){
 
 function openDeploiementsImport(){
   const data = loadDeploiementsData();
-  const projects = Object.keys(data);
-  const choice = prompt(`Quel projet mettre à jour ?\n\n${projects.map((p,i)=>`${i+1}. ${data[p].label}`).join('\n')}\n\n(Tape le numéro)`);
-  if (!choice) return;
-  const idx = parseInt(choice, 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= projects.length){ alert('Numéro invalide'); return; }
-  const key = projects[idx];
-  const which = prompt(`Mettre à jour MES ou MEP pour ${data[key].label} ?\n\n1. MES (Mise en Staging)\n2. MEP (Mise en Production)`);
-  if (!which) return;
-  const field = which.trim() === '1' ? 'mes' : (which.trim() === '2' ? 'mep' : null);
-  if (!field){ alert('Choix invalide'); return; }
-  const newText = prompt(`Colle les données ${field.toUpperCase()} pour ${data[key].label}\n(format : "count année-semaine" par ligne)`, data[key][field]);
-  if (newText === null) return;
-  data[key][field] = newText;
+  const container = document.getElementById('depl-import-fields');
+  if (!container) return;
+  const projects = Object.keys(data).filter(k => !k.startsWith('_'));
+  container.innerHTML = projects.map(key => {
+    const label = data[key].label || key;
+    const mes = escapeHtml(data[key].mes || '');
+    const mep = escapeHtml(data[key].mep || '');
+    return `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:10px;background:var(--surface2)">
+        <div style="font-weight:600;margin-bottom:8px;font-size:13px">${escapeHtml(label)}</div>
+        <div class="form-row" style="grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label>🧪 MES (Staging)</label>
+            <textarea id="depl-${key}-mes" rows="9" style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.4;resize:vertical">${mes}</textarea>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>🚀 MEP (Production)</label>
+            <textarea id="depl-${key}-mep" rows="9" style="font-family:'DM Mono',monospace;font-size:11px;line-height:1.4;resize:vertical">${mep}</textarea>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('depl-import-error').style.display = 'none';
+  openModal('modal-deploiements');
+}
+
+function saveDeploiementsFromModal(){
+  const data = loadDeploiementsData();
+  const projects = Object.keys(data).filter(k => !k.startsWith('_'));
+  const err = document.getElementById('depl-import-error');
+  // Validation : chaque ligne non vide doit matcher "nombre année-semaine"
+  const invalid = [];
+  for (const key of projects){
+    for (const field of ['mes','mep']){
+      const el = document.getElementById(`depl-${key}-${field}`);
+      if (!el) continue;
+      for (const line of el.value.split('\n')){
+        const t = line.trim();
+        if (!t) continue;
+        if (!/^\d+\s+\d{4}-\d{1,2}$/.test(t)){
+          invalid.push(`${data[key].label} ${field.toUpperCase()} : « ${t} »`);
+        }
+      }
+    }
+  }
+  if (invalid.length){
+    err.textContent = `Lignes invalides (format attendu "nombre année-semaine") : ${invalid.slice(0,3).join(' | ')}${invalid.length>3?` … (+${invalid.length-3})`:''}`;
+    err.style.display = 'block';
+    return;
+  }
+  // Sauvegarde
+  for (const key of projects){
+    data[key].mes = document.getElementById(`depl-${key}-mes`).value;
+    data[key].mep = document.getElementById(`depl-${key}-mep`).value;
+  }
   saveDeploiementsData(data);
+  closeModal('modal-deploiements');
   renderDeploiements();
 }
 
@@ -5078,7 +5137,7 @@ setTimeout(checkHashRoute, 200);
 
 // Expose les fonctions au scope global (script type=module isolé sinon)
 Object.assign(window, {
-  renderDeploiements, openDeploiementsImport,
+  renderDeploiements, openDeploiementsImport, saveDeploiementsFromModal,
   toggleWsMenu, clearSearch, showTab, toggleActionsMenu, closeActionsMenu,
   openImportModal, exportJSON, exportCSV, resetAll,
   openModal, closeModal, addDev, addChantier, addSprint, addTask,

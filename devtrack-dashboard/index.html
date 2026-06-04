@@ -1081,6 +1081,9 @@ const wsCol = collection(db, 'workspaces');
 let unsubState = null;
 let unsubWsList = null;
 let unsubRoadmap = null;
+let unsubDeploiements = null;
+let deploiementsCache = null; // cache local des donnees deploiements (sync Firestore)
+let deploiementsReady = false;
 
 // ===== ROADMAP STATE (global, cross-workspace) =====
 const ROADMAP_DEFAULT_CATEGORIES = [
@@ -1264,6 +1267,39 @@ async function saveRoadmap(){
       nextId: roadmap.nextId
     }, { merge: true });
   } catch(e){ console.error('saveRoadmap', e); showToast('Erreur sauvegarde roadmap'); }
+}
+
+// ===== DÉPLOIEMENTS : sync Firestore (global doc) =====
+const deploiementsDoc = () => doc(db, 'global', 'deploiements');
+function subscribeToDeploiements(){
+  if (unsubDeploiements) { try { unsubDeploiements(); } catch(e){} unsubDeploiements = null; }
+  unsubDeploiements = onSnapshot(deploiementsDoc(), async (snap) => {
+    if (snap.exists()){
+      const d = snap.data();
+      // Doc Firestore = { projects: { gutenberg: {label, mes, mep}, ... } }
+      if (d && d.projects && typeof d.projects === 'object'){
+        deploiementsCache = d.projects;
+      } else {
+        deploiementsCache = JSON.parse(JSON.stringify(DEPLOIEMENTS_DEFAULT));
+      }
+    } else {
+      // Doc inexistant : seed avec localStorage (si existant) sinon DEPLOIEMENTS_DEFAULT
+      let seed = null;
+      try { const raw = localStorage.getItem(DEPLOIEMENTS_STORAGE_KEY); if (raw) seed = JSON.parse(raw); } catch(e){}
+      if (!seed) seed = JSON.parse(JSON.stringify(DEPLOIEMENTS_DEFAULT));
+      deploiementsCache = seed;
+      try { await setDoc(deploiementsDoc(), { projects: seed }, { merge: true }); } catch(e){ console.error('seed deploiements', e); }
+    }
+    // cache local en parallele pour paint rapide hors-ligne
+    try { localStorage.setItem(DEPLOIEMENTS_STORAGE_KEY, JSON.stringify(deploiementsCache)); } catch(e){}
+    deploiementsReady = true;
+    if (document.getElementById('tab-deploiements')?.classList.contains('active')) renderDeploiements();
+  }, (err) => console.error('onSnapshot deploiements', err));
+}
+async function saveDeploiementsToFirestore(data){
+  try {
+    await setDoc(deploiementsDoc(), { projects: data }, { merge: true });
+  } catch(e){ console.error('saveDeploiements', e); showToast('Erreur sauvegarde déploiements'); }
 }
 
 // Migration: convertit task.validated/sprint.mep/sprint.mepValidated → task.status/task.mepDate
@@ -1554,6 +1590,7 @@ async function initApp(){
   subscribeToWorkspaceList();
   subscribeToActiveWorkspace();
   subscribeToRoadmap();
+  subscribeToDeploiements();
   updateWsUI();
   // backup auto si dernier > 1h
   maybeAutoBackup();
@@ -4898,11 +4935,17 @@ const DEPLOIEMENTS_DEFAULT = {
 };
 
 function loadDeploiementsData(){
+  // Source de verite = cache Firestore (rempli par subscribeToDeploiements)
+  // Fallback localStorage pour paint immediat avant la 1ere snapshot
+  if (deploiementsCache) return deploiementsCache;
   try { const raw = localStorage.getItem(DEPLOIEMENTS_STORAGE_KEY); if (raw) return JSON.parse(raw); } catch(e){}
   return JSON.parse(JSON.stringify(DEPLOIEMENTS_DEFAULT));
 }
 function saveDeploiementsData(data){
+  // Cache local immediat + persistance Firestore (broadcast aux autres clients)
+  deploiementsCache = data;
   try { localStorage.setItem(DEPLOIEMENTS_STORAGE_KEY, JSON.stringify(data)); } catch(e){}
+  saveDeploiementsToFirestore(data);
 }
 function parseWeeklyCounts(text){
   const m = new Map();

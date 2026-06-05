@@ -832,8 +832,12 @@
     </div>
     <div class="form-row" style="grid-template-columns:1fr 1fr 1fr">
       <div><label>📅 Date début</label><input type="date" id="roadmap-item-start"></div>
-      <div><label>🧪 MES (Staging)</label><input type="date" id="roadmap-item-mes" placeholder="optionnel"></div>
-      <div><label>🚀 MEP (Production)</label><input type="date" id="roadmap-item-end"></div>
+      <div id="roadmap-item-mes-wrap"><label>🧪 MES (Staging)</label><input type="date" id="roadmap-item-mes" placeholder="optionnel"></div>
+      <div id="roadmap-item-end-wrap"><label>🚀 MEP (Production)</label><input type="date" id="roadmap-item-end"></div>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px;background:var(--surface2);padding:8px 10px;border-radius:6px;border:1px solid var(--border)">
+      <input type="checkbox" id="roadmap-item-backlog" onchange="onRoadmapItemBacklogToggle()" style="width:auto;margin:0">
+      <label for="roadmap-item-backlog" style="margin:0;cursor:pointer;flex:1">📦 <strong>Backlog</strong> <span style="color:var(--text2);font-weight:400;font-size:11px">— pas de date MES/MEP fixée, position auto à +2 mois sur la frise</span></label>
     </div>
     <div class="form-row">
       <div><label>Statut</label>
@@ -858,6 +862,10 @@
       </div>
     </div>
     <div class="error-msg" id="roadmap-item-error"></div>
+    <details id="roadmap-item-history-wrap" style="margin-top:10px;display:none">
+      <summary style="cursor:pointer;font-size:12px;color:var(--text2);padding:4px 0">📜 <span id="roadmap-item-history-label">Historique des changements de dates</span></summary>
+      <div id="roadmap-item-history" style="margin-top:6px;font-size:11px;color:var(--text2);max-height:160px;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px"></div>
+    </details>
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn btn-ghost btn-sm" id="roadmap-item-delete-btn" onclick="deleteRoadmapItemFromModal()" style="color:var(--danger);display:none">🗑 Supprimer</button>
       <div style="display:flex;gap:8px">
@@ -4211,7 +4219,9 @@ function renderRoadmap(){
           <span class="roadmap-row-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}${isLate?' <span class="delay-chip" style="margin-left:4px">⚠ MEP dépassée</span>':''}</span>
           <span class="roadmap-row-cat" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}55">${escapeHtml(cat.name)}</span>
           <span class="roadmap-row-status">${status.icon} ${status.label}</span>
+          ${it.backlog ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#6b728022;color:#9ca3af;border:1px solid #6b728055" title="Backlog — pas de date MES/MEP fixée, position auto à +2 mois">📦 Backlog</span>` : ''}
           ${mesPx !== null ? `<span class="badge badge-yellow" style="font-size:9px;padding:1px 5px">🧪 MES ${it.mesDate}</span>` : ''}
+          ${(it.dateHistory && it.dateHistory.length) ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa55" title="${it.dateHistory.length} changement(s) de dates dans l'historique">📜 ${it.dateHistory.length}</span>` : ''}
         </div>
         <div class="roadmap-row-track" data-item-id="${it.id}" style="--tick-w:${perTickPx}px">
           <div class="roadmap-today" style="left:${todayPx}px"></div>
@@ -4381,6 +4391,64 @@ function getDevColorByName(name){
   if (fromItem) return fromItem.devColor;
   return '#8892a4';
 }
+// ===== ROADMAP : utilitaires backlog + historique =====
+const ROADMAP_BACKLOG_OFFSET_DAYS = 60; // 2 mois par défaut
+const CURRENT_USER_KEY = 'devtrack_current_user';
+function getCurrentUser(){
+  try {
+    let u = localStorage.getItem(CURRENT_USER_KEY);
+    if (u) return u;
+    u = prompt('Comment t\'appelles-tu ? (utilisé pour tracer les changements de dates)') || '';
+    u = u.trim().slice(0, 60);
+    if (u){ localStorage.setItem(CURRENT_USER_KEY, u); return u; }
+  } catch(e){}
+  return 'Anonyme';
+}
+function onRoadmapItemBacklogToggle(){
+  const checked = document.getElementById('roadmap-item-backlog').checked;
+  const mesWrap = document.getElementById('roadmap-item-mes-wrap');
+  const endWrap = document.getElementById('roadmap-item-end-wrap');
+  const mesInput = document.getElementById('roadmap-item-mes');
+  const endInput = document.getElementById('roadmap-item-end');
+  if (checked){
+    // Masque MES + MEP, vide les valeurs (elles seront auto-calculées au save)
+    if (mesWrap) mesWrap.style.opacity = '0.45';
+    if (endWrap) endWrap.style.opacity = '0.45';
+    mesInput.disabled = true;
+    endInput.disabled = true;
+    mesInput.value = '';
+    // end sera auto-calculé au save (start + 60j)
+  } else {
+    if (mesWrap) mesWrap.style.opacity = '';
+    if (endWrap) endWrap.style.opacity = '';
+    mesInput.disabled = false;
+    endInput.disabled = false;
+    // remplir end avec start+60j si vide pour aider l'utilisateur
+    if (!endInput.value){
+      const start = document.getElementById('roadmap-item-start').value;
+      if (start) endInput.value = addDaysISO(start, ROADMAP_BACKLOG_OFFSET_DAYS);
+    }
+  }
+}
+function renderRoadmapItemHistory(history){
+  const wrap = document.getElementById('roadmap-item-history-wrap');
+  const list = document.getElementById('roadmap-item-history');
+  const label = document.getElementById('roadmap-item-history-label');
+  if (!wrap || !list) return;
+  const entries = Array.isArray(history) ? history : [];
+  if (!entries.length){ wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  if (label) label.textContent = `Historique des changements de dates (${entries.length})`;
+  const fieldLabel = (f) => f === 'mesDate' ? '🧪 MES' : f === 'end' ? '🚀 MEP' : f === 'start' ? '📅 Début' : f;
+  list.innerHTML = entries.slice().reverse().map(h => {
+    const when = h.at ? new Date(h.at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+    const from = h.from || '—';
+    const to = h.to || '—';
+    const by = h.by ? ` par <strong>${escapeHtml(h.by)}</strong>` : '';
+    return `<div style="padding:3px 0;border-bottom:1px solid var(--border)">${when} · ${fieldLabel(h.field)} : <span style="text-decoration:line-through;opacity:0.6">${from}</span> → <strong>${to}</strong>${by}</div>`;
+  }).join('');
+}
+
 function openRoadmapItemModal(itemId){
   const isEdit = !!itemId;
   document.getElementById('modal-roadmap-item-title').textContent = isEdit ? '✏ Modifier l\'élément' : '+ Élément de roadmap';
@@ -4400,6 +4468,8 @@ function openRoadmapItemModal(itemId){
     document.getElementById('roadmap-item-end').value = it.end || '';
     document.getElementById('roadmap-item-status').value = it.status || 'a_planifier';
     document.getElementById('roadmap-item-priority').value = it.priority || 'P2';
+    document.getElementById('roadmap-item-backlog').checked = !!it.backlog;
+    renderRoadmapItemHistory(it.dateHistory);
     if (delBtn) delBtn.style.display = '';
   } else {
     document.getElementById('roadmap-item-name').value = '';
@@ -4412,9 +4482,12 @@ function openRoadmapItemModal(itemId){
     document.getElementById('roadmap-item-end').value = in60;
     document.getElementById('roadmap-item-status').value = 'a_planifier';
     document.getElementById('roadmap-item-priority').value = 'P2';
+    document.getElementById('roadmap-item-backlog').checked = false;
+    renderRoadmapItemHistory([]);
     if (delBtn) delBtn.style.display = 'none';
   }
   document.getElementById('roadmap-item-error').style.display = 'none';
+  onRoadmapItemBacklogToggle(); // applique l'etat visuel (disabled / opacity)
   openModal('modal-roadmap-item');
 }
 function saveRoadmapItem(){
@@ -4424,22 +4497,47 @@ function saveRoadmapItem(){
   const devName = document.getElementById('roadmap-item-dev').value || '';
   const devColor = devName ? getDevColorByName(devName) : '';
   const start = document.getElementById('roadmap-item-start').value;
-  const mesDate = document.getElementById('roadmap-item-mes').value || '';
-  const end = document.getElementById('roadmap-item-end').value;
+  const backlog = !!document.getElementById('roadmap-item-backlog').checked;
+  let mesDate = document.getElementById('roadmap-item-mes').value || '';
+  let end = document.getElementById('roadmap-item-end').value;
   const status = document.getElementById('roadmap-item-status').value;
   const priority = document.getElementById('roadmap-item-priority').value;
   const err = document.getElementById('roadmap-item-error');
   if (!name){ err.textContent = 'Le nom est requis.'; err.style.display='block'; return; }
-  if (!start || !end){ err.textContent = 'Dates requises.'; err.style.display='block'; return; }
-  if (end < start){ err.textContent = 'La date MEP doit être après la date de début.'; err.style.display='block'; return; }
-  if (mesDate && mesDate > end){ err.textContent = 'La MES (staging) ne peut pas être postérieure à la MEP (production).'; err.style.display='block'; return; }
-  if (mesDate && mesDate < start){ err.textContent = 'La MES (staging) ne peut pas être antérieure à la date de début.'; err.style.display='block'; return; }
+  if (!start){ err.textContent = 'La date de début est requise.'; err.style.display='block'; return; }
+  if (backlog){
+    // Backlog : MES vide, end auto-calculé à start + 2 mois
+    mesDate = '';
+    end = addDaysISO(start, ROADMAP_BACKLOG_OFFSET_DAYS);
+  } else {
+    if (!end){ err.textContent = 'La date MEP est requise (ou coche Backlog).'; err.style.display='block'; return; }
+    if (end < start){ err.textContent = 'La date MEP doit être après la date de début.'; err.style.display='block'; return; }
+    if (mesDate && mesDate > end){ err.textContent = 'La MES (staging) ne peut pas être postérieure à la MEP (production).'; err.style.display='block'; return; }
+    if (mesDate && mesDate < start){ err.textContent = 'La MES (staging) ne peut pas être antérieure à la date de début.'; err.style.display='block'; return; }
+  }
   if (id){
     const it = roadmap.items.find(i => i.id === id);
-    if (it){ it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor; it.start = start; it.mesDate = mesDate; it.end = end; it.status = status; it.priority = priority; }
+    if (it){
+      // Diff dates -> historique
+      const history = Array.isArray(it.dateHistory) ? it.dateHistory.slice() : [];
+      const changes = [];
+      if ((it.mesDate || '') !== mesDate) changes.push({ field: 'mesDate', from: it.mesDate || '', to: mesDate });
+      if ((it.end || '') !== end) changes.push({ field: 'end', from: it.end || '', to: end });
+      if ((it.start || '') !== start) changes.push({ field: 'start', from: it.start || '', to: start });
+      if (changes.length){
+        const by = getCurrentUser();
+        const at = new Date().toISOString();
+        for (const c of changes) history.push({ ...c, by, at });
+      }
+      it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor;
+      it.start = start; it.mesDate = mesDate; it.end = end;
+      it.status = status; it.priority = priority;
+      it.backlog = backlog;
+      it.dateHistory = history;
+    }
   } else {
     const newId = 'rm_' + Date.now() + '_' + (roadmap.nextId++);
-    roadmap.items.push({ id:newId, name, categoryId, devName, devColor, start, mesDate, end, status, priority });
+    roadmap.items.push({ id:newId, name, categoryId, devName, devColor, start, mesDate, end, status, priority, backlog, dateHistory: [] });
   }
   closeModal('modal-roadmap-item');
   saveRoadmap();
@@ -5157,7 +5255,7 @@ Object.assign(window, {
   renderTickets, openTicketModal, openNewTicketModal, saveTicket, deleteTicketFromModal, onTicketChantierChange, setTicketsView,
   openBackupsModal, closeBackupsModal, restoreBackup,
   openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock,
-  renderRoadmap, initRoadmapTooltips, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal,
+  renderRoadmap, initRoadmapTooltips, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal, onRoadmapItemBacklogToggle,
   openRoadmapCategoriesModal, addRoadmapCategory, renameRoadmapCategory, recolorRoadmapCategory, deleteRoadmapCategory,
   openImportRoadmapModal, handleRoadmapFile, confirmRoadmapImport,
   renderProgrammation, updateProgItem, deleteProgItem

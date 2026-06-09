@@ -861,6 +861,16 @@
         </select>
       </div>
     </div>
+    <div id="roadmap-item-subtasks-wrap" style="margin-top:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);padding:10px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--text2);font-weight:600">☑ <span id="roadmap-item-subtasks-label">Sous-tâches</span></div>
+      </div>
+      <div id="roadmap-item-subtasks-list" style="font-size:12px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <input id="roadmap-item-subtask-new" type="text" placeholder="+ Nouvelle sous-tâche…" style="flex:1;padding:6px 8px;font-size:12px" onkeydown="if(event.key==='Enter'){event.preventDefault();addRoadmapItemSubtask();}">
+        <button class="btn btn-ghost btn-sm" onclick="addRoadmapItemSubtask()" style="padding:6px 10px;font-size:12px">+ Ajouter</button>
+      </div>
+    </div>
     <div class="error-msg" id="roadmap-item-error"></div>
     <details id="roadmap-item-history-wrap" style="margin-top:10px;display:none">
       <summary style="cursor:pointer;font-size:12px;color:var(--text2);padding:4px 0">📜 <span id="roadmap-item-history-label">Historique des changements de dates</span></summary>
@@ -4222,6 +4232,7 @@ function renderRoadmap(){
           ${it.backlog ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#6b728022;color:#9ca3af;border:1px solid #6b728055" title="Backlog — pas de date MES/MEP fixée, position auto à +2 mois">📦 Backlog</span>` : ''}
           ${mesPx !== null ? `<span class="badge badge-yellow" style="font-size:9px;padding:1px 5px">🧪 MES ${it.mesDate}</span>` : ''}
           ${(it.dateHistory && it.dateHistory.length) ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa55" title="${it.dateHistory.length} changement(s) de dates dans l'historique">📜 ${it.dateHistory.length}</span>` : ''}
+          ${(it.subtasks && it.subtasks.length) ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#6ee7b722;color:#6ee7b7;border:1px solid #6ee7b755" title="${it.subtasks.filter(s=>s.done).length}/${it.subtasks.length} sous-tâches terminées">☑ ${it.subtasks.filter(s=>s.done).length}/${it.subtasks.length}</span>` : ''}
         </div>
         <div class="roadmap-row-track" data-item-id="${it.id}" style="--tick-w:${perTickPx}px">
           <div class="roadmap-today" style="left:${todayPx}px"></div>
@@ -4430,6 +4441,73 @@ function onRoadmapItemBacklogToggle(){
     }
   }
 }
+// ===== ROADMAP : sous-taches (todolist par item) =====
+// Etat local pour suivre l'item courant ouvert dans la modal (pour les sous-taches autonomes)
+let _currentRoadmapItemId = null;
+function renderRoadmapItemSubtasks(itemId){
+  const wrap = document.getElementById('roadmap-item-subtasks-wrap');
+  const list = document.getElementById('roadmap-item-subtasks-list');
+  const label = document.getElementById('roadmap-item-subtasks-label');
+  if (!wrap || !list) return;
+  // En mode creation (pas d'itemId), on cache la section : on peut pas avoir de sous-taches avant que l'item existe
+  if (!itemId){ wrap.style.display = 'none'; return; }
+  const it = roadmap.items.find(i => i.id === itemId);
+  if (!it){ wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const subs = Array.isArray(it.subtasks) ? it.subtasks : [];
+  const doneCount = subs.filter(s => s.done).length;
+  if (label) label.textContent = subs.length ? `Sous-tâches (${doneCount}/${subs.length})` : 'Sous-tâches';
+  if (!subs.length){
+    list.innerHTML = '<div style="color:var(--text2);font-size:11px;font-style:italic;padding:4px 0">Aucune sous-tâche. Ajoute-en une avec le champ ci-dessous.</div>';
+    return;
+  }
+  list.innerHTML = subs.map(s => {
+    const checked = s.done ? 'checked' : '';
+    const labelStyle = s.done ? 'text-decoration:line-through;opacity:0.55' : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surface)">
+      <input type="checkbox" ${checked} onchange="toggleRoadmapItemSubtask('${s.id}')" style="width:auto;margin:0;flex:0 0 auto;cursor:pointer">
+      <span style="flex:1;${labelStyle}">${escapeHtml(s.label || '')}</span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteRoadmapItemSubtask('${s.id}')" title="Supprimer" style="padding:2px 6px;font-size:11px;color:var(--text2)">✕</button>
+    </div>`;
+  }).join('');
+}
+function addRoadmapItemSubtask(){
+  const input = document.getElementById('roadmap-item-subtask-new');
+  const label = (input.value || '').trim();
+  if (!label) return;
+  if (!_currentRoadmapItemId){ showToast('Enregistre d\'abord l\'item avant d\'ajouter des sous-tâches'); return; }
+  const it = roadmap.items.find(i => i.id === _currentRoadmapItemId);
+  if (!it) return;
+  if (!Array.isArray(it.subtasks)) it.subtasks = [];
+  const id = 'st_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+  it.subtasks.push({ id, label: label.slice(0, 200), done: false, createdAt: new Date().toISOString() });
+  input.value = '';
+  saveRoadmap();
+  renderRoadmapItemSubtasks(_currentRoadmapItemId);
+  renderRoadmap(); // pour MAJ du compteur sous-tâches sur la ligne (s'il existe un jour)
+}
+function toggleRoadmapItemSubtask(subId){
+  if (!_currentRoadmapItemId) return;
+  const it = roadmap.items.find(i => i.id === _currentRoadmapItemId);
+  if (!it || !Array.isArray(it.subtasks)) return;
+  const s = it.subtasks.find(x => x.id === subId);
+  if (!s) return;
+  s.done = !s.done;
+  if (s.done) s.doneAt = new Date().toISOString(); else delete s.doneAt;
+  saveRoadmap();
+  renderRoadmapItemSubtasks(_currentRoadmapItemId);
+  renderRoadmap();
+}
+function deleteRoadmapItemSubtask(subId){
+  if (!_currentRoadmapItemId) return;
+  const it = roadmap.items.find(i => i.id === _currentRoadmapItemId);
+  if (!it || !Array.isArray(it.subtasks)) return;
+  it.subtasks = it.subtasks.filter(x => x.id !== subId);
+  saveRoadmap();
+  renderRoadmapItemSubtasks(_currentRoadmapItemId);
+  renderRoadmap();
+}
+
 function renderRoadmapItemHistory(history){
   const wrap = document.getElementById('roadmap-item-history-wrap');
   const list = document.getElementById('roadmap-item-history');
@@ -4470,6 +4548,8 @@ function openRoadmapItemModal(itemId){
     document.getElementById('roadmap-item-priority').value = it.priority || 'P2';
     document.getElementById('roadmap-item-backlog').checked = !!it.backlog;
     renderRoadmapItemHistory(it.dateHistory);
+    _currentRoadmapItemId = it.id;
+    renderRoadmapItemSubtasks(it.id);
     if (delBtn) delBtn.style.display = '';
   } else {
     document.getElementById('roadmap-item-name').value = '';
@@ -4484,6 +4564,8 @@ function openRoadmapItemModal(itemId){
     document.getElementById('roadmap-item-priority').value = 'P2';
     document.getElementById('roadmap-item-backlog').checked = false;
     renderRoadmapItemHistory([]);
+    _currentRoadmapItemId = null;
+    renderRoadmapItemSubtasks(null);
     if (delBtn) delBtn.style.display = 'none';
   }
   document.getElementById('roadmap-item-error').style.display = 'none';
@@ -5256,6 +5338,7 @@ Object.assign(window, {
   openBackupsModal, closeBackupsModal, restoreBackup,
   openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock,
   renderRoadmap, initRoadmapTooltips, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal, onRoadmapItemBacklogToggle,
+  addRoadmapItemSubtask, toggleRoadmapItemSubtask, deleteRoadmapItemSubtask,
   openRoadmapCategoriesModal, addRoadmapCategory, renameRoadmapCategory, recolorRoadmapCategory, deleteRoadmapCategory,
   openImportRoadmapModal, handleRoadmapFile, confirmRoadmapImport,
   renderProgrammation, updateProgItem, deleteProgItem

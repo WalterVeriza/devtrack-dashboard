@@ -826,6 +826,10 @@
     <div class="modal-title" id="modal-roadmap-item-title">+ Élément de roadmap</div>
     <input type="hidden" id="roadmap-item-id">
     <div class="form-group"><label>Nom</label><input id="roadmap-item-name" placeholder="Ex: Refonte SEO 2026"></div>
+    <div class="form-group">
+      <label>Description <span style="color:var(--text2);font-weight:400;font-size:11px">(contexte, détails, lien Jira/Slack, etc. — optionnel)</span></label>
+      <textarea id="roadmap-item-description" rows="3" placeholder="Décris le besoin, les liens utiles, le contexte…" style="font-family:inherit;font-size:12px;line-height:1.4;resize:vertical"></textarea>
+    </div>
     <div class="form-row">
       <div><label>Catégorie</label><select id="roadmap-item-category"></select></div>
       <div><label>👤 Dev responsable</label><select id="roadmap-item-dev"></select></div>
@@ -4226,7 +4230,7 @@ function renderRoadmap(){
           <span class="roadmap-row-num">${idx+1}</span>
           <span class="roadmap-row-pri" title="${prio.label}">${prio.icon}</span>
           ${devAvatar}
-          <span class="roadmap-row-name" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}${isLate?' <span class="delay-chip" style="margin-left:4px">⚠ MEP dépassée</span>':''}</span>
+          <span class="roadmap-row-name" title="${escapeHtml(it.name)}${it.description ? '\n\n' + escapeHtml((it.description||'').slice(0,500)) + ((it.description||'').length > 500 ? '…' : '') : ''}">${escapeHtml(it.name)}${it.description ? ' <span style="font-size:10px;color:var(--text2);margin-left:3px" title="Cet item a une description (visible au survol et dans la modal)">💬</span>' : ''}${isLate?' <span class="delay-chip" style="margin-left:4px">⚠ MEP dépassée</span>':''}</span>
           <span class="roadmap-row-cat" style="background:${cat.color}22;color:${cat.color};border:1px solid ${cat.color}55">${escapeHtml(cat.name)}</span>
           <span class="roadmap-row-status">${status.icon} ${status.label}</span>
           ${it.backlog ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#6b728022;color:#9ca3af;border:1px solid #6b728055" title="Backlog — pas de date MES/MEP fixée, position auto à +2 mois">📦 Backlog</span>` : ''}
@@ -4539,6 +4543,7 @@ function openRoadmapItemModal(itemId){
     const it = roadmap.items.find(i => i.id === itemId);
     if (!it) return;
     document.getElementById('roadmap-item-name').value = it.name || '';
+    document.getElementById('roadmap-item-description').value = it.description || '';
     document.getElementById('roadmap-item-category').value = it.categoryId || roadmap.categories[0]?.id || '';
     fillRoadmapDevSelect(devSelect, it.devName || '');
     document.getElementById('roadmap-item-start').value = it.start || '';
@@ -4553,6 +4558,7 @@ function openRoadmapItemModal(itemId){
     if (delBtn) delBtn.style.display = '';
   } else {
     document.getElementById('roadmap-item-name').value = '';
+    document.getElementById('roadmap-item-description').value = '';
     document.getElementById('roadmap-item-category').value = roadmap.categories[0]?.id || '';
     fillRoadmapDevSelect(devSelect, '');
     const today = TODAY.toISOString().slice(0,10);
@@ -4575,6 +4581,7 @@ function openRoadmapItemModal(itemId){
 function saveRoadmapItem(){
   const id = document.getElementById('roadmap-item-id').value;
   const name = document.getElementById('roadmap-item-name').value.trim();
+  const description = (document.getElementById('roadmap-item-description').value || '').trim();
   const categoryId = document.getElementById('roadmap-item-category').value;
   const devName = document.getElementById('roadmap-item-dev').value || '';
   const devColor = devName ? getDevColorByName(devName) : '';
@@ -4611,7 +4618,7 @@ function saveRoadmapItem(){
         const at = new Date().toISOString();
         for (const c of changes) history.push({ ...c, by, at });
       }
-      it.name = name; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor;
+      it.name = name; it.description = description; it.categoryId = categoryId; it.devName = devName; it.devColor = devColor;
       it.start = start; it.mesDate = mesDate; it.end = end;
       it.status = status; it.priority = priority;
       it.backlog = backlog;
@@ -4619,7 +4626,7 @@ function saveRoadmapItem(){
     }
   } else {
     const newId = 'rm_' + Date.now() + '_' + (roadmap.nextId++);
-    roadmap.items.push({ id:newId, name, categoryId, devName, devColor, start, mesDate, end, status, priority, backlog, dateHistory: [] });
+    roadmap.items.push({ id:newId, name, description, categoryId, devName, devColor, start, mesDate, end, status, priority, backlog, dateHistory: [] });
   }
   closeModal('modal-roadmap-item');
   saveRoadmap();

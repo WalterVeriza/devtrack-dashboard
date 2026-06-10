@@ -315,10 +315,8 @@
   .roadmap-bar { position: absolute; top: 6px; bottom: 6px; border-radius: 4px; cursor: grab; display: flex; align-items: center; padding: 0 8px; font-size: 10px; color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; user-select: none; transition: box-shadow 0.15s; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
   .roadmap-bar:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.45); z-index: 1; }
   .roadmap-bar.dragging { cursor: grabbing; opacity: 0.85; z-index: 5; }
-  .roadmap-bar-handle { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; background: rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.15s; }
-  .roadmap-bar:hover .roadmap-bar-handle { opacity: 1; }
-  .roadmap-bar-handle.left { left: 0; border-radius: 4px 0 0 4px; }
-  .roadmap-bar-handle.right { right: 0; border-radius: 0 4px 4px 0; }
+  /* Poignees de redimensionnement masquees (drag desactive 2026-06-09) */
+  .roadmap-bar-handle { display: none; }
   .roadmap-bar-label { pointer-events: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 1px rgba(0,0,0,0.4); }
   .roadmap-bar.status-termine { opacity: 0.55; }
   .roadmap-mes-marker { position: absolute; top: 4px; bottom: 4px; width: 2px; background: #fff; opacity: 0.9; pointer-events: none; z-index: 3; border-radius: 1px; }
@@ -4299,21 +4297,10 @@ function initRoadmapTooltips(){
 }
 
 function attachRoadmapDragHandlers(trackWidth, axis){
-  const bars = document.querySelectorAll('.roadmap-bar');
-  bars.forEach(bar => {
-    const itemId = bar.dataset.itemId;
-    bar.addEventListener('mousedown', (e) => {
-      const handle = e.target.closest('.roadmap-bar-handle');
-      if (handle){
-        e.stopPropagation(); e.preventDefault();
-        startRoadmapResize(e, itemId, handle.dataset.handle, trackWidth, axis);
-        return;
-      }
-      if (e.button !== 0) return;
-      e.preventDefault();
-      startRoadmapDrag(e, itemId, trackWidth, axis);
-    });
-  });
+  // Drag/resize desactives a la demande de Gaspard (2026-06-09) :
+  // les changements de dates ne se font plus qu'en ouvrant l'item via le onclick inline
+  // (trop sensible avant, les utilisateurs deplacaient les barres sans le vouloir).
+  return;
 }
 let _roadmapDragState = null;
 function startRoadmapDrag(e, itemId, trackWidth, axis){

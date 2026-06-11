@@ -873,6 +873,17 @@
         <button class="btn btn-ghost btn-sm" onclick="addRoadmapItemSubtask()" style="padding:6px 10px;font-size:12px">+ Ajouter</button>
       </div>
     </div>
+    <div id="roadmap-item-docs-wrap" style="margin-top:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);padding:10px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--text2);font-weight:600">📎 <span id="roadmap-item-docs-label">Pièces jointes</span></div>
+      </div>
+      <div id="roadmap-item-docs-list" style="font-size:12px;display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="roadmap-item-doc-file" type="file" multiple style="flex:1;padding:4px;font-size:11px" onchange="uploadRoadmapItemDocuments()">
+        <span id="roadmap-item-doc-status" style="font-size:11px;color:var(--text2)"></span>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px">Taille max par fichier : 500 Ko (idéal pour screenshots et petits PDF)</div>
+    </div>
     <div class="error-msg" id="roadmap-item-error"></div>
     <details id="roadmap-item-history-wrap" style="margin-top:10px;display:none">
       <summary style="cursor:pointer;font-size:12px;color:var(--text2);padding:4px 0">📜 <span id="roadmap-item-history-label">Historique des changements de dates</span></summary>
@@ -1113,6 +1124,9 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const wsCol = collection(db, 'workspaces');
+// Pieces jointes : stockees en base64 dans Firestore (pas de Firebase Storage, plan gratuit).
+// Limite Firestore = 1 Mo par document ; on cap chaque fichier a 500 Ko raw (~666 Ko base64).
+const MAX_DOC_SIZE_KB = 500;
 
 let unsubState = null;
 let unsubWsList = null;
@@ -4235,6 +4249,7 @@ function renderRoadmap(){
           ${mesPx !== null ? `<span class="badge badge-yellow" style="font-size:9px;padding:1px 5px">🧪 MES ${it.mesDate}</span>` : ''}
           ${(it.dateHistory && it.dateHistory.length) ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa55" title="${it.dateHistory.length} changement(s) de dates dans l'historique">📜 ${it.dateHistory.length}</span>` : ''}
           ${(it.subtasks && it.subtasks.length) ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#6ee7b722;color:#6ee7b7;border:1px solid #6ee7b755" title="${it.subtasks.filter(s=>s.done).length}/${it.subtasks.length} sous-tâches terminées">☑ ${it.subtasks.filter(s=>s.done).length}/${it.subtasks.length}</span>` : ''}
+          ${(it.documents && it.documents.length) ? `<span class="badge" style="font-size:9px;padding:1px 5px;background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa55" title="${it.documents.length} pièce(s) jointe(s)">📎 ${it.documents.length}</span>` : ''}
         </div>
         <div class="roadmap-row-track" data-item-id="${it.id}" style="--tick-w:${perTickPx}px">
           <div class="roadmap-today" style="left:${todayPx}px"></div>
@@ -4499,6 +4514,104 @@ function deleteRoadmapItemSubtask(subId){
   renderRoadmap();
 }
 
+// ===== ROADMAP : pièces jointes (Firebase Storage) =====
+function formatBytes(n){
+  if (n < 1024) return n + ' o';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' Ko';
+  return (n/1024/1024).toFixed(1) + ' Mo';
+}
+function renderRoadmapItemDocs(itemId){
+  const wrap = document.getElementById('roadmap-item-docs-wrap');
+  const list = document.getElementById('roadmap-item-docs-list');
+  const label = document.getElementById('roadmap-item-docs-label');
+  if (!wrap || !list) return;
+  if (!itemId){ wrap.style.display = 'none'; return; }
+  const it = roadmap.items.find(i => i.id === itemId);
+  if (!it){ wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  const docs = Array.isArray(it.documents) ? it.documents : [];
+  if (label) label.textContent = docs.length ? `Pièces jointes (${docs.length})` : 'Pièces jointes';
+  if (!docs.length){
+    list.innerHTML = '<div style="color:var(--text2);font-size:11px;font-style:italic;padding:4px 0">Aucun document. Ajoute un fichier ci-dessous.</div>';
+    return;
+  }
+  list.innerHTML = docs.map(d => {
+    const when = d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+    const by = d.uploadedBy ? ` · ${escapeHtml(d.uploadedBy)}` : '';
+    const size = (typeof d.size === 'number') ? ` · ${formatBytes(d.size)}` : '';
+    // Compat ascendante : on supporte dataUrl (base64 inline) OU url (lien externe, ancien format)
+    const href = d.dataUrl || d.url || '#';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;background:var(--surface)">
+      <a href="${escapeHtml(href)}" download="${escapeHtml(d.name || 'fichier')}" target="_blank" rel="noopener" style="flex:1;text-decoration:none;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="Télécharger ${escapeHtml(d.name || '')}">📎 ${escapeHtml(d.name || 'fichier')}</a>
+      <span style="font-size:10px;color:var(--text2);white-space:nowrap">${when}${size}${by}</span>
+      <button class="btn btn-ghost btn-sm" onclick="removeRoadmapItemDocument('${d.id}')" title="Supprimer" style="padding:2px 6px;font-size:11px;color:var(--text2)">✕</button>
+    </div>`;
+  }).join('');
+}
+function readFileAsDataURL(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error('lecture fichier KO'));
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadRoadmapItemDocuments(){
+  const input = document.getElementById('roadmap-item-doc-file');
+  const status = document.getElementById('roadmap-item-doc-status');
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  if (!_currentRoadmapItemId){ showToast('Enregistre d\'abord l\'item avant d\'ajouter des pièces jointes'); input.value = ''; return; }
+  const it = roadmap.items.find(i => i.id === _currentRoadmapItemId);
+  if (!it){ input.value = ''; return; }
+  if (!Array.isArray(it.documents)) it.documents = [];
+  const by = getCurrentUser();
+  const maxBytes = MAX_DOC_SIZE_KB * 1024;
+  for (const file of files){
+    if (file.size > maxBytes){
+      showToast(`"${file.name}" dépasse ${MAX_DOC_SIZE_KB} Ko, ignoré`);
+      continue;
+    }
+    try {
+      status.textContent = `Lecture ${file.name}…`;
+      const dataUrl = await readFileAsDataURL(file);
+      // Verifier qu'on ne fait pas exploser la taille du doc Firestore (~1 Mo max).
+      // On estime grossierement la taille totale apres ajout.
+      const projectedSize = JSON.stringify(it.documents).length + dataUrl.length + 500;
+      if (projectedSize > 950_000){
+        showToast(`"${file.name}" ignoré : ferait dépasser la limite Firestore (1 Mo total pour cet item). Supprime une autre pièce jointe d'abord.`);
+        continue;
+      }
+      const id = 'doc_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+      it.documents.push({
+        id, name: file.name, size: file.size, contentType: file.type || '',
+        dataUrl,
+        uploadedAt: new Date().toISOString(), uploadedBy: by
+      });
+      await saveRoadmap();
+      renderRoadmapItemDocs(_currentRoadmapItemId);
+      renderRoadmap();
+    } catch (e) {
+      console.error('upload doc', e);
+      showToast(`Erreur ajout "${file.name}" : ${e.message || 'inconnu'}`);
+    }
+  }
+  status.textContent = '';
+  input.value = '';
+}
+async function removeRoadmapItemDocument(docId){
+  if (!_currentRoadmapItemId) return;
+  const it = roadmap.items.find(i => i.id === _currentRoadmapItemId);
+  if (!it || !Array.isArray(it.documents)) return;
+  const d = it.documents.find(x => x.id === docId);
+  if (!d) return;
+  if (!confirm(`Supprimer "${d.name}" ?`)) return;
+  it.documents = it.documents.filter(x => x.id !== docId);
+  await saveRoadmap();
+  renderRoadmapItemDocs(_currentRoadmapItemId);
+  renderRoadmap();
+}
+
 function renderRoadmapItemHistory(history){
   const wrap = document.getElementById('roadmap-item-history-wrap');
   const list = document.getElementById('roadmap-item-history');
@@ -4542,6 +4655,7 @@ function openRoadmapItemModal(itemId){
     renderRoadmapItemHistory(it.dateHistory);
     _currentRoadmapItemId = it.id;
     renderRoadmapItemSubtasks(it.id);
+    renderRoadmapItemDocs(it.id);
     if (delBtn) delBtn.style.display = '';
   } else {
     document.getElementById('roadmap-item-name').value = '';
@@ -4559,6 +4673,7 @@ function openRoadmapItemModal(itemId){
     renderRoadmapItemHistory([]);
     _currentRoadmapItemId = null;
     renderRoadmapItemSubtasks(null);
+    renderRoadmapItemDocs(null);
     if (delBtn) delBtn.style.display = 'none';
   }
   document.getElementById('roadmap-item-error').style.display = 'none';
@@ -5333,6 +5448,7 @@ Object.assign(window, {
   openEditBlock, saveBlockOverride, resetBlockOverride, toggleMepBlock,
   renderRoadmap, initRoadmapTooltips, openRoadmapItemModal, saveRoadmapItem, deleteRoadmapItemFromModal, onRoadmapItemBacklogToggle,
   addRoadmapItemSubtask, toggleRoadmapItemSubtask, deleteRoadmapItemSubtask,
+  uploadRoadmapItemDocuments, removeRoadmapItemDocument,
   openRoadmapCategoriesModal, addRoadmapCategory, renameRoadmapCategory, recolorRoadmapCategory, deleteRoadmapCategory,
   openImportRoadmapModal, handleRoadmapFile, confirmRoadmapImport,
   renderProgrammation, updateProgItem, deleteProgItem
